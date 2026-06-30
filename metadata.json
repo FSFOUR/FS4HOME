@@ -1,0 +1,7 @@
+{
+  "name": "FS4HOME - Intelligent Finance & Lifestyle Assistant",
+  "description": "A comprehensive personal finance tracker using Kakeibo, Rich Dad Poor Dad principles, and Sharia-compliant Zakat calculation, featuring Kerala-focused meal planning and household task management.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
