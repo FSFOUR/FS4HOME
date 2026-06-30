@@ -89,7 +89,7 @@ const Schedule: React.FC<Props> = ({
   }, [state.dailyChecklist]);
 
   const nextPrayer = useMemo(() => {
-    if (!state.prayerTimes) return null;
+    if (!state.prayerTimes || !state.prayerTimes.fajr || !state.prayerTimes.dhuhr) return null;
     const nowStr = currentTime.getHours().toString().padStart(2, '0') + ":" + currentTime.getMinutes().toString().padStart(2, '0');
     const times = [
       { name: 'Fajr', time: state.prayerTimes.fajr },

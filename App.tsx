@@ -154,14 +154,16 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const addMinutes = (time: string, minutes: number): string => {
+  const addMinutes = (time: string | undefined, minutes: number): string => {
+    if (!time || !time.includes(':')) return '00:00';
     const [h, m] = time.split(':').map(Number);
     const date = new Date();
     date.setHours(h, m + minutes, 0);
     return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
   };
 
-  const getDuration = (start: string, end: string): number => {
+  const getDuration = (start: string | undefined, end: string | undefined): number => {
+    if (!start || !end || !start.includes(':') || !end.includes(':')) return 0;
     const [sH, sM] = start.split(':').map(Number);
     const [eH, eM] = end.split(':').map(Number);
     let startMin = sH * 60 + sM;
