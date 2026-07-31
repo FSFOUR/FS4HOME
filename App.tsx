@@ -19,6 +19,7 @@ import {
   PrayerTimes
 } from './types';
 import { ICONS, DAYS_OF_WEEK } from './constants';
+import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
 import Lifestyle from './components/Lifestyle';
@@ -408,45 +409,43 @@ const App: React.FC = () => {
     }));
   };
 
+// ... (inside App component's return)
   return (
     <Router>
-      <div className="flex flex-col md:flex-row min-h-screen bg-slate-50 text-slate-900 overflow-x-hidden">
-        <Navigation />
-        <main className="flex-1 pb-24 md:pb-0 p-4 md:p-8 lg:p-12 overflow-y-auto">
-          <Routes>
-            <Route path="/" element={<Dashboard state={state} onUpdateUser={updateUserName} onAddTransaction={addTransaction} />} />
-            <Route path="/schedule" element={
-              <Schedule 
-                state={state} 
-                onAddSchedule={addScheduleItem} 
-                onDeleteSchedule={deleteScheduleItem} 
-                onUpdateRoutine={updateRoutinePhase}
-                onAddRoutinePhase={addRoutinePhase}
-                onDeleteRoutinePhase={deleteRoutinePhase}
-                onAddRoutineSubsection={addRoutineSubsection}
-                onDeleteRoutineSubsection={deleteRoutineSubsection}
-                onUpdateRoutineSubsection={updateRoutineSubsection}
-                onReorderRoutine={reorderRoutine}
-                onToggleChecklist={toggleChecklistItem}
-                onUpdateReview={updateEveningReview}
-              />
-            } />
-            <Route path="/finance" element={
-              <Transactions 
-                state={state} 
-                onAddTransaction={addTransaction} 
-                onUpdateTransaction={updateTransaction}
-                onDeleteTransaction={deleteTransaction}
-                onUpdateTarget={(val) => setState(prev => ({...prev, monthlySavingsTarget: val}))} 
-                onUpdateMonthlyCategoryTarget={updateMonthlyCategoryTarget}
-                onUpdateReflection={updateReflection}
-              />
-            } />
-            <Route path="/lifestyle" element={<Lifestyle state={state} onAddTask={addTask} onUpdateFood={updateFoodPlan} onAddVehicle={addVehicleRecord} />} />
-            <Route path="/zakat" element={<Zakat state={state} onUpdateGiven={(val) => setState(prev => ({...prev, zakatGiven: val}))} />} />
-          </Routes>
-        </main>
-      </div>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard state={state} onUpdateUser={updateUserName} onAddTransaction={addTransaction} />} />
+          <Route path="/schedule" element={
+            <Schedule 
+              state={state} 
+              onAddSchedule={addScheduleItem} 
+              onDeleteSchedule={deleteScheduleItem} 
+              onUpdateRoutine={updateRoutinePhase}
+              onAddRoutinePhase={addRoutinePhase}
+              onDeleteRoutinePhase={deleteRoutinePhase}
+              onAddRoutineSubsection={addRoutineSubsection}
+              onDeleteRoutineSubsection={deleteRoutineSubsection}
+              onUpdateRoutineSubsection={updateRoutineSubsection}
+              onReorderRoutine={reorderRoutine}
+              onToggleChecklist={toggleChecklistItem}
+              onUpdateReview={updateEveningReview}
+            />
+          } />
+          <Route path="/finance" element={
+            <Transactions 
+              state={state} 
+              onAddTransaction={addTransaction} 
+              onUpdateTransaction={updateTransaction}
+              onDeleteTransaction={deleteTransaction}
+              onUpdateTarget={(val) => setState(prev => ({...prev, monthlySavingsTarget: val}))} 
+              onUpdateMonthlyCategoryTarget={updateMonthlyCategoryTarget}
+              onUpdateReflection={updateReflection}
+            />
+          } />
+          <Route path="/lifestyle" element={<Lifestyle state={state} onAddTask={addTask} onUpdateFood={updateFoodPlan} onAddVehicle={addVehicleRecord} />} />
+          <Route path="/zakat" element={<Zakat state={state} onUpdateGiven={(val) => setState(prev => ({...prev, zakatGiven: val}))} />} />
+        </Routes>
+      </Layout>
     </Router>
   );
 };
