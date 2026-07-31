@@ -1,11 +1,17 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { AppState, WealthType, KakeiboCategory } from '../types';
+import { AppState, WealthType, KakeiboCategory, Transaction } from '../types';
 import { getFinancialAdvice } from '../services/geminiService';
+import QuickAddModal from './QuickAddModal';
 
-const Dashboard: React.FC<{ state: AppState; onUpdateUser: (name: string) => void }> = ({ state, onUpdateUser }) => {
+const Dashboard: React.FC<{ 
+  state: AppState; 
+  onUpdateUser: (name: string) => void;
+  onAddTransaction: (t: Omit<Transaction, 'id'>) => void;
+}> = ({ state, onUpdateUser, onAddTransaction }) => {
   const [advice, setAdvice] = useState<string>('Seeking financial wisdom...');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -94,11 +100,19 @@ const Dashboard: React.FC<{ state: AppState; onUpdateUser: (name: string) => voi
         </div>
         
         <div className="hidden sm:flex items-center gap-4">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="text-xs md:text-sm font-bold bg-emerald-600 text-white px-5 py-2.5 rounded-full shadow-sm hover:bg-emerald-700 transition-colors"
+          >
+            Quick Add
+          </button>
           <div className="text-xs md:text-sm font-bold bg-white px-5 py-2.5 rounded-full border border-slate-200 text-slate-500 shadow-sm">
             {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
           </div>
         </div>
       </header>
+
+      <QuickAddModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAddTransaction={onAddTransaction} />
 
       {/* Main Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-2 md:px-0">

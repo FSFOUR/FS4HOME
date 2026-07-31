@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { AppState, Transaction, WealthType, KakeiboCategory, CategoryTarget, Reflection } from '../types';
 import { getMonthlyAdvisory } from '../services/geminiService';
+import MonthlySpendingChart from './MonthlySpendingChart';
 
 interface Props {
   state: AppState;
@@ -160,6 +161,8 @@ const Transactions: React.FC<Props> = ({ state, onAddTransaction, onUpdateTransa
           </div>
         </div>
       </div>
+      
+      <MonthlySpendingChart spending={selectedMonthData.spending} targets={targets} />
 
       {/* MONTHLY BUDGET PLANNER MAIN VIEW */}
       <section className="bg-[#0F172A] text-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] shadow-2xl relative overflow-hidden ring-1 ring-white/10">

@@ -414,7 +414,7 @@ const App: React.FC = () => {
         <Navigation />
         <main className="flex-1 pb-24 md:pb-0 p-4 md:p-8 lg:p-12 overflow-y-auto">
           <Routes>
-            <Route path="/" element={<Dashboard state={state} onUpdateUser={updateUserName} />} />
+            <Route path="/" element={<Dashboard state={state} onUpdateUser={updateUserName} onAddTransaction={addTransaction} />} />
             <Route path="/schedule" element={
               <Schedule 
                 state={state} 
