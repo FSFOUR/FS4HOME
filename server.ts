@@ -18,6 +18,24 @@ async function startServer() {
   console.log("GEMINI_API_KEY length:", apiKey ? apiKey.length : "undefined");
   const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
+  // Helper for retries
+  async function callGeminiWithRetry(fn: () => Promise<any>, retries = 3, delay = 2000): Promise<any> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (error: any) {
+        // Check if it's a 503 or "high demand"
+        const isTransient = error?.status === 503 || error?.message?.includes("high demand");
+        if (isTransient && i < retries - 1) {
+          console.warn(`Gemini API transient error, retrying (${i + 1}/${retries})...`);
+          await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+          continue;
+        }
+        throw error;
+      }
+    }
+  }
+
   // Proxy API routes
   app.post("/api/gemini/advice", async (req, res) => {
     if (!ai) return res.status(500).json({ error: "Gemini API key not configured" });
@@ -39,10 +57,10 @@ async function startServer() {
         
         Ensure the advice is practical, motivating, and rooted in true ethical experience.
       `;
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+      const response = await callGeminiWithRetry(() => ai.models.generateContent({
+        model: 'gemini-3.5-flash-lite',
         contents: prompt,
-      });
+      }));
       res.json({ text: response.text });
     } catch (error: any) {
       console.error("Islamic Wisdom Error:", error);
@@ -58,8 +76,8 @@ async function startServer() {
           const prompt = `Get the Islamic prayer times (Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha) for ${location || "Malappuram, Kerala"} on ${date}. 
           The response must be in strict JSON format. Use 24-hour HH:mm format for times.`;
           
-          const response = await ai.models.generateContent({
-              model: 'gemini-3.5-flash',
+          const response = await callGeminiWithRetry(() => ai.models.generateContent({
+              model: 'gemini-3.5-flash-lite',
               contents: prompt,
               config: {
               responseMimeType: "application/json",
@@ -76,12 +94,33 @@ async function startServer() {
                   required: ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"]
               }
               }
-          });
+          }));
           res.json(JSON.parse(response.text));
       } catch (error: any) {
           console.error("Error fetching prayer times:", error);
           res.status(500).json({ error: error.message || "Failed to fetch prayer times" });
       }
+  });
+
+  app.post("/api/gemini/kakeibo-insight", async (req, res) => {
+    if (!ai) return res.status(500).json({ error: "Gemini API key not configured" });
+    try {
+      const { state } = req.body;
+      const recentTransactions = state.transactions.slice(-10);
+      const prompt = `
+        Analyze the following recent transactions: ${JSON.stringify(recentTransactions)}.
+        Suggest exactly ONE actionable, specific, and practical way to reduce spending based on the Kakeibo methodology (mindful spending, focusing on needs vs wants).
+        Keep the response under 50 words and maintain an encouraging, supportive tone.
+      `;
+      const response = await callGeminiWithRetry(() => ai.models.generateContent({
+        model: 'gemini-3.5-flash-lite',
+        contents: prompt,
+      }));
+      res.json({ text: response.text });
+    } catch (error: any) {
+      console.error("Kakeibo Insight Error:", error);
+      res.status(500).json({ error: error.message || "Failed to get insight" });
+    }
   });
 
   // Vite middleware

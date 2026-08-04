@@ -15,6 +15,21 @@ export const getFinancialAdvice = async (state: AppState) => {
   }
 };
 
+export const getKakeiboInsight = async (state: AppState) => {
+  try {
+    const response = await fetch("/api/gemini/kakeibo-insight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state })
+    });
+    const data = await response.json();
+    return data.text;
+  } catch (error) {
+    console.error("Kakeibo Insight Error:", error);
+    return "Reflect on your recent 'Wants' purchases. Could any be deferred to next month to increase your savings?";
+  }
+};
+
 export const getMonthlyAdvisory = async (monthKey: string, reflection: Reflection, stats: any) => {
     // This function also needs to call the API, but for now I'll just keep it simple as it wasn't fully moved.
     // Actually the user didn't ask me to implement getMonthlyAdvisory in server.ts, but I should probably do it to be complete.

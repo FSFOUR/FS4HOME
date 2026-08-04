@@ -412,7 +412,7 @@ const App: React.FC = () => {
 // ... (inside App component's return)
   return (
     <Router>
-      <Layout>
+      <Layout onAddTransaction={addTransaction}>
         <Routes>
           <Route path="/" element={<Dashboard state={state} onUpdateUser={updateUserName} onAddTransaction={addTransaction} />} />
           <Route path="/schedule" element={

@@ -139,25 +139,25 @@ const Transactions: React.FC<Props> = ({ state, onAddTransaction, onUpdateTransa
     <div className="space-y-6 md:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-24 px-2 md:px-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight">Finance Portal</h2>
-          <p className="text-[10px] md:text-sm text-slate-400 font-bold uppercase tracking-widest mt-1">Ethical Budgeting & Planning</p>
+          <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight">Finance Portal</h2>
+          <p className="text-[10px] md:text-sm text-lime-400 font-bold uppercase tracking-widest mt-1">Ethical Budgeting & Planning</p>
         </div>
-        <div className="w-full md:w-auto flex items-center justify-between gap-4 bg-white p-3 md:p-4 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="w-full md:w-auto flex items-center justify-between gap-4 glass-card p-3 md:p-4 rounded-2xl border border-lime-500/20 shadow-lg">
           <div className="flex flex-col">
-            <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Savings Goal</span>
+            <span className="text-[9px] md:text-[10px] font-black text-emerald-300/80 uppercase tracking-widest">Savings Goal</span>
             <div className="flex items-center gap-1">
-              <span className="text-emerald-600 font-black text-base md:text-lg">₹</span>
+              <span className="text-lime-400 font-black text-base md:text-lg">₹</span>
               <input 
                 type="number" 
                 value={state.monthlySavingsTarget}
                 onChange={(e) => onUpdateTarget(Number(e.target.value))}
-                className="w-20 md:w-24 font-black text-slate-800 focus:outline-none bg-transparent text-base md:text-lg"
+                className="w-20 md:w-24 font-black text-white focus:outline-none bg-transparent text-base md:text-lg"
               />
             </div>
           </div>
-          <div className="h-8 w-px bg-slate-100" />
-          <div className="bg-emerald-50 px-2 md:px-3 py-1 rounded-full shrink-0">
-            <span className="text-[9px] md:text-[10px] font-black text-emerald-600 uppercase tracking-tight">Active Plan</span>
+          <div className="h-8 w-px bg-lime-500/20" />
+          <div className="bg-lime-400/10 border border-lime-400/20 px-3 py-1 rounded-full shrink-0">
+            <span className="text-[9px] md:text-[10px] font-black text-lime-400 uppercase tracking-tight">Active Plan</span>
           </div>
         </div>
       </div>
@@ -216,6 +216,9 @@ const Transactions: React.FC<Props> = ({ state, onAddTransaction, onUpdateTransa
                     <div className="flex items-center gap-2">
                       <span className="text-xs md:text-sm">{meta.icon}</span>
                       <h4 className={`font-black text-[10px] md:text-xs ${colorClasses.text} uppercase tracking-widest`}>{cat}</h4>
+                      {target.amount > 0 && (spent / target.amount) >= 0.8 && (
+                        <span className="text-[8px] bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded-full font-black uppercase">Near Limit</span>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-4 md:space-y-6">
@@ -442,15 +445,15 @@ const Transactions: React.FC<Props> = ({ state, onAddTransaction, onUpdateTransa
 
       {/* Reflections Zone - Stacked on Mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col">
+        <div className="glass-card rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-xl border border-lime-500/20 flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
             <div>
-              <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Weekly Audit</h3>
-              <p className="text-[9px] md:text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5 md:mt-1">Self-correction habits</p>
+              <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">Weekly Audit</h3>
+              <p className="text-[9px] md:text-xs text-lime-400 font-bold uppercase tracking-widest mt-0.5 md:mt-1">Self-correction habits</p>
             </div>
-            <div className="flex overflow-x-auto no-scrollbar gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 w-full sm:w-auto">
+            <div className="flex overflow-x-auto no-scrollbar gap-1 bg-emerald-950/60 p-1 rounded-xl border border-emerald-500/20 w-full sm:w-auto">
               {[1, 2, 3, 4, 5].map(w => (
-                <button key={w} onClick={() => setSelectedWeek(w)} className={`flex-1 sm:flex-none px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black transition-all ${selectedWeek === w ? 'bg-[#0F172A] text-white shadow-lg' : 'text-slate-400'}`}>W{w}</button>
+                <button key={w} onClick={() => setSelectedWeek(w)} className={`flex-1 sm:flex-none px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black transition-all ${selectedWeek === w ? 'bg-lime-400 text-emerald-950 shadow-lg' : 'text-emerald-300/60'}`}>W{w}</button>
               ))}
             </div>
           </div>
@@ -462,11 +465,11 @@ const Transactions: React.FC<Props> = ({ state, onAddTransaction, onUpdateTransa
               { id: 'q4', label: 'Next week goal?', icon: '🚀' }
             ].map((q) => (
               <div key={q.id} className="space-y-1.5">
-                <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <label className="text-[9px] md:text-[10px] font-black text-emerald-300/80 uppercase tracking-widest flex items-center gap-2">
                   <span className="text-sm md:text-base">{q.icon}</span> {q.label}
                 </label>
                 <textarea 
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl md:rounded-3xl p-4 md:p-5 text-xs md:text-sm font-medium focus:bg-white focus:ring-4 focus:ring-emerald-500/5 outline-none transition-all resize-none h-20 md:h-24 placeholder-slate-300" 
+                  className="w-full bg-emerald-950/50 border border-emerald-500/20 rounded-2xl md:rounded-3xl p-4 md:p-5 text-xs md:text-sm font-medium focus:bg-emerald-950/80 focus:ring-2 focus:ring-lime-400/40 text-white outline-none transition-all resize-none h-20 md:h-24 placeholder-emerald-400/30" 
                   placeholder="Journal your weekly summary..."
                   value={(weeklyRef as any)[q.id]}
                   onChange={(e) => handleWeeklyRefChange(q.id as any, e.target.value)}

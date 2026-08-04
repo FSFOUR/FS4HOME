@@ -1,0 +1,41 @@
+/* Glassmorphism & Custom Emerald/Lime Theme Utilities */
+.glass-card {
+  background: rgba(15, 48, 30, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 197, 63, 0.2);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+}
+
+.glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-card-hover:hover {
+  background: rgba(20, 62, 39, 0.85);
+  border-color: rgba(139, 197, 63, 0.4);
+  box-shadow: 0 25px 50px -12px rgba(139, 197, 63, 0.25);
+}
+
+.glow-lime {
+  box-shadow: 0 0 25px rgba(139, 197, 63, 0.4);
+}
+
+.glow-lime-sm {
+  box-shadow: 0 0 12px rgba(139, 197, 63, 0.3);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(10, 35, 22, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 197, 63, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 197, 63, 0.6);
+}
