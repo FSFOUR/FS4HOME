@@ -120,6 +120,37 @@ export interface PrayerTimes {
   isha: string;
 }
 
+export type UserStrategy =
+  | 'SAVE_MORE'
+  | 'DEBT_FREE'
+  | 'EMERGENCY_FUND'
+  | 'LIFESTYLE_CONTROL'
+  | 'INCREASE_INVESTMENT'
+  | 'MAJOR_PURCHASE';
+
+export interface FinancialGoal {
+  id: string;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  monthlyContribution: number;
+  targetDate: string;
+  category: string;
+  icon?: string;
+}
+
+export interface FinancialDebt {
+  id: string;
+  name: string;
+  balance: number;
+  interestRate: number; // annual percentage, e.g. 36% for credit card, 9% for home loan
+  monthlyEMI: number;
+  tenureMonthsRemaining?: number;
+  category: 'Credit Card' | 'Personal Loan' | 'Car Loan' | 'Home Loan' | 'Education' | 'Other';
+}
+
+export type DisplayDensity = 'comfortable' | 'compact' | 'extra-compact';
+
 export interface AppState {
   transactions: Transaction[];
   tasks: Task[];
@@ -141,4 +172,9 @@ export interface AppState {
     gratitude: string;
   };
   prayerTimes: PrayerTimes | null;
+  // 80/20 Financial Extensions
+  financialGoals?: FinancialGoal[];
+  financialDebts?: FinancialDebt[];
+  userStrategy?: UserStrategy;
+  displayDensity?: DisplayDensity;
 }

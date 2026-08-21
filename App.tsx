@@ -16,7 +16,9 @@ import {
   RoutinePhase,
   RoutineSubsection,
   DailyChecklistItem,
-  PrayerTimes
+  PrayerTimes,
+  FinancialGoal,
+  UserStrategy
 } from './types';
 import { ICONS, DAYS_OF_WEEK } from './constants';
 import Layout from './components/Layout';
@@ -25,6 +27,11 @@ import Transactions from './components/Transactions';
 import Lifestyle from './components/Lifestyle';
 import Zakat from './components/Zakat';
 import Schedule from './components/Schedule';
+import ParetoDashboard from './components/ParetoInsights/ParetoDashboard';
+import { BudgetView } from './components/BudgetView';
+import { GoalsView } from './components/GoalsView';
+import { CalculatorModal } from './components/Tools/CalculatorModal';
+import { Settings } from './components/Settings';
 import { fetchPrayerTimes } from './services/geminiService';
 
 const STORAGE_KEY = 'fs4home_data';
@@ -229,9 +236,16 @@ const App: React.FC = () => {
     loadPrayers();
   }, []);
 
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+  };
+
   const addTransaction = (t: Omit<Transaction, 'id'>) => {
     const newT = { ...t, id: crypto.randomUUID() };
     setState(prev => ({ ...prev, transactions: [newT, ...prev.transactions] }));
+    showToast(`Added ${t.type}: ₹${t.amount.toLocaleString()} ✓`);
   };
 
   const updateTransaction = (updatedT: Transaction) => {
@@ -239,6 +253,7 @@ const App: React.FC = () => {
       ...prev,
       transactions: prev.transactions.map(t => t.id === updatedT.id ? updatedT : t)
     }));
+    showToast('Transaction updated ✓');
   };
 
   const deleteTransaction = (id: string) => {
@@ -246,10 +261,30 @@ const App: React.FC = () => {
       ...prev,
       transactions: prev.transactions.filter(t => t.id !== id)
     }));
+    showToast('Transaction deleted ✓');
+  };
+
+  const addFinancialGoal = (g: Omit<FinancialGoal, 'id'>) => {
+    setState(prev => ({
+      ...prev,
+      financialGoals: [...(prev.financialGoals || []), { ...g, id: crypto.randomUUID() }]
+    }));
+    showToast('Financial goal saved ✓');
+  };
+
+  const updateUserStrategy = (strat: UserStrategy) => {
+    setState(prev => ({ ...prev, userStrategy: strat }));
+    showToast('Strategy updated ✓');
+  };
+
+  const updateUserName = (name: string) => {
+    setState(prev => ({ ...prev, userName: name }));
+    showToast('Profile updated ✓');
   };
 
   const addTask = (task: Omit<Task, 'id'>) => {
     setState(prev => ({ ...prev, tasks: [...prev.tasks, { ...task, id: crypto.randomUUID() }] }));
+    showToast('Task added ✓');
   };
 
   const updateFoodPlan = (day: string, meal: string, value: string) => {
@@ -264,10 +299,7 @@ const App: React.FC = () => {
 
   const addVehicleRecord = (record: Omit<VehicleRecord, 'id'>) => {
     setState(prev => ({ ...prev, vehicleRecords: [...prev.vehicleRecords, { ...record, id: crypto.randomUUID() }] }));
-  };
-
-  const updateUserName = (name: string) => {
-    setState(prev => ({ ...prev, userName: name }));
+    showToast('Vehicle log added ✓');
   };
 
   const updateMonthlyCategoryTarget = (monthKey: string, category: KakeiboCategory, target: CategoryTarget) => {
@@ -298,6 +330,7 @@ const App: React.FC = () => {
 
   const addScheduleItem = (item: Omit<ScheduleItem, 'id'>) => {
     setState(prev => ({ ...prev, schedule: [...prev.schedule, { ...item, id: crypto.randomUUID() }] }));
+    showToast('Schedule updated ✓');
   };
 
   const deleteScheduleItem = (id: string) => {
@@ -409,12 +442,56 @@ const App: React.FC = () => {
     }));
   };
 
-// ... (inside App component's return)
   return (
     <Router>
-      <Layout onAddTransaction={addTransaction}>
+      <Layout 
+        state={state} 
+        onAddTransaction={addTransaction}
+        toastMessage={toastMessage}
+        onCloseToast={() => setToastMessage(null)}
+      >
         <Routes>
           <Route path="/" element={<Dashboard state={state} onUpdateUser={updateUserName} onAddTransaction={addTransaction} />} />
+          <Route path="/pareto" element={
+            <ParetoDashboard 
+              state={state} 
+              onUpdateState={setState} 
+              onAddTransaction={addTransaction}
+              onAddGoal={addFinancialGoal}
+              onUpdateStrategy={updateUserStrategy}
+            />
+          } />
+          <Route path="/insights" element={
+            <ParetoDashboard 
+              state={state} 
+              onUpdateState={setState} 
+              onAddTransaction={addTransaction}
+              onAddGoal={addFinancialGoal}
+              onUpdateStrategy={updateUserStrategy}
+            />
+          } />
+          <Route path="/budget" element={
+            <BudgetView 
+              state={state} 
+              onUpdateTarget={(val) => setState(prev => ({ ...prev, monthlySavingsTarget: val }))}
+            />
+          } />
+          <Route path="/goals" element={
+            <GoalsView 
+              state={state} 
+              onAddGoal={addFinancialGoal}
+              onUpdateState={setState}
+              onShowToast={showToast}
+            />
+          } />
+          <Route path="/tools/calculator" element={<CalculatorModal isPage={true} />} />
+          <Route path="/settings" element={
+            <Settings 
+              state={state} 
+              onUpdateState={setState} 
+              onShowToast={showToast}
+            />
+          } />
           <Route path="/schedule" element={
             <Schedule 
               state={state} 

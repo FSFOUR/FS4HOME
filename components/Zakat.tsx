@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { AppState, WealthType } from '../types';
 
@@ -15,115 +14,166 @@ const Zakat: React.FC<Props> = ({ state, onUpdateGiven }) => {
 
     const totalWealth = eligibleAssets;
     const zakatRate = 0.025; // 2.5%
-    const totalDue = totalWealth * zakatRate;
-    const remaining = Math.max(0, totalDue - state.zakatGiven);
+    const totalDue = Math.round(totalWealth * zakatRate);
+    const paid = state.zakatGiven || 0;
+    const remaining = Math.max(0, totalDue - paid);
+    const progressPct = totalDue > 0 ? Math.min(100, Math.round((paid / totalDue) * 100)) : 100;
 
-    return { totalWealth, totalDue, remaining };
+    // Breakdown
+    const cashAssets = state.transactions
+      .filter(t => t.type === WealthType.ASSET && t.description.toLowerCase().includes('cash'))
+      .reduce((a, b) => a + b.amount, 0);
+    
+    const bankAssets = state.transactions
+      .filter(t => t.type === WealthType.ASSET && (t.description.toLowerCase().includes('bank') || t.description.toLowerCase().includes('savings')))
+      .reduce((a, b) => a + b.amount, 0);
+
+    const otherAssets = Math.max(0, totalWealth - cashAssets - bankAssets);
+
+    return { totalWealth, totalDue, paid, remaining, progressPct, cashAssets, bankAssets, otherAssets };
   }, [state]);
 
+  // Nisab Reference: ~85g Gold or 595g Silver (~₹6,50,000 / ~₹65,000 approx)
+  const isAboveNisab = calculations.totalWealth >= 65000;
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <header className="text-center px-4">
-        <h2 className="text-2xl md:text-4xl font-black text-emerald-800 tracking-tight">Charity & Donation</h2>
-        <p className="text-sm md:text-base text-slate-500 mt-2 font-medium max-w-lg mx-auto italic">"And establish prayer and give charity and whatever good you put forward for yourselves - you will find it with Allah."</p>
-      </header>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 px-2">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-emerald-50 text-center relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-500" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Eligible Wealth</p>
-          <p className="text-2xl font-black text-emerald-900">₹{calculations.totalWealth.toLocaleString()}</p>
+    <div className="space-y-3.5 max-w-5xl mx-auto text-slate-100 animate-in fade-in duration-200 pb-16">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
+        <div>
+          <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">Zakat & Charity</h1>
+          <p className="text-xs text-emerald-300/70">2.5% annual wealth purification, Nisab verification, and donation progress</p>
         </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-blue-50 text-center relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Donation Due (2.5%)</p>
-          <p className="text-2xl font-black text-blue-900">₹{calculations.totalDue.toLocaleString()}</p>
-        </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-rose-50 text-center relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-rose-500" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Balance Due</p>
-          <p className="text-2xl font-black text-rose-900">₹{calculations.remaining.toLocaleString()}</p>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/20 text-xs">
+          <span className="text-lime-400">⚖️ Nisab Status:</span>
+          <span className={`font-black ${isAboveNisab ? 'text-lime-400' : 'text-amber-400'}`}>
+            {isAboveNisab ? 'Threshold Met' : 'Below Nisab'}
+          </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        <div className="bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-emerald-50 space-y-8">
-          <div>
-            <h3 className="text-xl font-black text-slate-800 mb-2">Donation Progress</h3>
-            <p className="text-xs text-slate-400 font-medium">Record your contributions toward fulfilling your annual donation.</p>
+      {/* 3 Compact KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div className="glass-card p-3 rounded-xl border border-emerald-500/20">
+          <div className="flex items-center justify-between text-[10px] font-bold text-emerald-300/70 uppercase">
+            <span>Eligible Wealth</span>
+            <span>💰</span>
           </div>
-          
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="block text-xs font-black text-slate-400 uppercase">Paid Contributions</label>
-              <div className="relative group">
-                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-emerald-600 font-black text-xl group-focus-within:scale-125 transition-transform">₹</span>
-                <input 
-                  type="number" 
-                  className="w-full pl-12 pr-6 py-5 bg-emerald-50/20 rounded-2xl border-2 border-emerald-100 focus:border-emerald-500 focus:bg-white text-emerald-900 font-black text-2xl outline-none transition-all shadow-inner"
-                  value={state.zakatGiven}
-                  onChange={(e) => onUpdateGiven(Number(e.target.value))}
-                />
-              </div>
-            </div>
-
-            <div className="w-full bg-slate-100 h-4 rounded-full overflow-hidden p-1 shadow-inner">
-               <div 
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-1000 shadow-md"
-                  style={{ width: `${Math.min(100, (state.zakatGiven / (calculations.totalDue || 1)) * 100)}%` }}
-               />
-            </div>
-          </div>
-
-          <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100 flex gap-4">
-            <div className="text-2xl">⚖️</div>
-            <div className="space-y-1">
-              <h4 className="font-black text-amber-800 text-xs uppercase tracking-tighter">Nishab Check</h4>
-              <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
-                Ensure your wealth exceeds the gold/silver threshold (Nishab) held for one full lunar year before calculating.
-              </p>
-            </div>
-          </div>
+          <p className="text-lg md:text-xl font-black text-white mt-1">₹{calculations.totalWealth.toLocaleString()}</p>
+          <span className="text-[10px] text-emerald-400/60">Calculated from your Assets</span>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-            <h3 className="font-black text-slate-800 mb-6 uppercase tracking-tight text-sm">Asset Analysis</h3>
-            <div className="space-y-6">
-              <div className="flex justify-between items-end">
-                <div className="space-y-0.5">
-                   <p className="text-[10px] font-black text-slate-400 uppercase">Liquid Cash & Savings</p>
-                   <p className="font-black text-emerald-600 text-lg">₹{state.transactions.filter(t => t.type === WealthType.ASSET && t.description.toLowerCase().includes('cash')).reduce((a, b) => a + b.amount, 0).toLocaleString()}</p>
-                </div>
-                <div className="h-10 w-1 bg-emerald-100 rounded-full" />
-              </div>
-              <div className="flex justify-between items-end">
-                <div className="space-y-0.5">
-                   <p className="text-[10px] font-black text-slate-400 uppercase">Investments & Gold</p>
-                   <p className="font-black text-emerald-600 text-lg">₹{state.transactions.filter(t => t.type === WealthType.ASSET && !t.description.toLowerCase().includes('cash')).reduce((a, b) => a + b.amount, 0).toLocaleString()}</p>
-                </div>
-                <div className="h-10 w-1 bg-emerald-100 rounded-full" />
-              </div>
-              <div className="pt-4 border-t border-slate-50">
-                 <p className="text-[10px] text-slate-300 italic font-medium leading-tight">
-                   Note: Personal-use items like your primary home, car, and tools are exempt from donation calculations.
-                 </p>
-              </div>
-            </div>
+        <div className="glass-card p-3 rounded-xl border border-emerald-500/20">
+          <div className="flex items-center justify-between text-[10px] font-bold text-emerald-300/70 uppercase">
+            <span>Zakat Due (2.5%)</span>
+            <span>🤲</span>
           </div>
+          <p className="text-lg md:text-xl font-black text-lime-400 mt-1">₹{calculations.totalDue.toLocaleString()}</p>
+          <span className="text-[10px] text-lime-400/70">Purification obligation</span>
+        </div>
 
-          <div className="bg-gradient-to-br from-emerald-800 to-emerald-950 text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-            <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/5 rounded-full -mb-16 -mr-16 blur-2xl" />
-            <div className="relative z-10">
-              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-6 text-xl">✨</div>
-              <h4 className="font-black text-lg mb-2 uppercase tracking-tighter">Barakah in Wealth</h4>
-              <p className="text-xs md:text-sm opacity-80 italic font-medium leading-relaxed">
-                "Take from their wealth a charity by which you purify them and cause them increase..."
-              </p>
-            </div>
+        <div className="glass-card p-3 rounded-xl border border-emerald-500/20">
+          <div className="flex items-center justify-between text-[10px] font-bold text-emerald-300/70 uppercase">
+            <span>Remaining Due</span>
+            <span>⏳</span>
           </div>
+          <p className="text-lg md:text-xl font-black text-rose-400 mt-1">₹{calculations.remaining.toLocaleString()}</p>
+          <span className="text-[10px] text-emerald-300/60">₹{calculations.paid.toLocaleString()} paid so far</span>
         </div>
       </div>
+
+      {/* Main 2-Column Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        
+        {/* Left Column: Donation Progress & Record Payment */}
+        <div className="glass-card p-3.5 rounded-2xl border border-emerald-500/20 space-y-3">
+          <div className="flex items-center justify-between border-b border-emerald-500/15 pb-2">
+            <h3 className="text-xs font-black text-white uppercase">Donation Fulfillment</h3>
+            <span className="text-xs font-black text-lime-400">{calculations.progressPct}% Fulfilled</span>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-1">
+            <div className="w-full bg-emerald-950/80 h-2.5 rounded-full overflow-hidden border border-emerald-500/20 p-0.5">
+              <div
+                className="h-full bg-gradient-to-r from-emerald-500 to-lime-400 rounded-full transition-all duration-500 shadow-sm"
+                style={{ width: `${calculations.progressPct}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] font-bold text-emerald-300/70">
+              <span>Paid: ₹{calculations.paid.toLocaleString()}</span>
+              <span>Target: ₹{calculations.totalDue.toLocaleString()}</span>
+            </div>
+          </div>
+
+          {/* Paid Amount Input */}
+          <div className="space-y-1.5 pt-1">
+            <label className="block text-[10px] font-bold text-emerald-300/70 uppercase">
+              Update Paid Contributions (₹)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-lime-400">₹</span>
+              <input
+                type="number"
+                min="0"
+                value={state.zakatGiven || 0}
+                onChange={(e) => onUpdateGiven(Math.max(0, Number(e.target.value)))}
+                className="w-full pl-7 pr-3 py-2 bg-[#061f12] border border-emerald-500/30 rounded-xl text-base font-black text-white outline-none focus:border-lime-400"
+              />
+            </div>
+            <p className="text-[10px] text-emerald-300/60">
+              Enter total donations given this lunar year towards zakat/charity.
+            </p>
+          </div>
+
+          {/* Nisab Guidance Box */}
+          <div className="p-2.5 rounded-xl bg-emerald-950/50 border border-emerald-500/15 flex items-start gap-2 text-xs">
+            <span className="text-base shrink-0">📜</span>
+            <div className="space-y-0.5 text-emerald-200/90 text-[11px]">
+              <span className="font-bold text-white block">Nisab Criteria:</span>
+              Zakat is obligatory when net wealth held for one lunar year exceeds the value of 85g gold or 595g silver.
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Asset Breakdown & Quick Rules */}
+        <div className="glass-card p-3.5 rounded-2xl border border-emerald-500/20 space-y-3">
+          <div className="flex items-center justify-between border-b border-emerald-500/15 pb-2">
+            <h3 className="text-xs font-black text-white uppercase">Wealth Asset Breakdown</h3>
+            <span className="text-[10px] text-emerald-300/60 font-mono">From Balance Sheet</span>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/10">
+              <span className="text-emerald-200">Cash & Liquid Holdings</span>
+              <span className="font-mono font-bold text-white">₹{calculations.cashAssets.toLocaleString()}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/10">
+              <span className="text-emerald-200">Bank Accounts & Deposits</span>
+              <span className="font-mono font-bold text-white">₹{calculations.bankAssets.toLocaleString()}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/10">
+              <span className="text-emerald-200">Investments & Gold Equiv.</span>
+              <span className="font-mono font-bold text-white">₹{calculations.otherAssets.toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div className="border-t border-emerald-500/15 pt-2 space-y-1 text-[11px] text-emerald-300/80">
+            <div className="font-bold text-white text-xs mb-1">Eligible Recipients (Asnaf):</div>
+            <div className="grid grid-cols-2 gap-1 text-[10px]">
+              <span className="p-1 rounded bg-emerald-950/60 border border-emerald-500/10 text-emerald-200">• The Poor (Fuqara)</span>
+              <span className="p-1 rounded bg-emerald-950/60 border border-emerald-500/10 text-emerald-200">• The Needy (Masakin)</span>
+              <span className="p-1 rounded bg-emerald-950/60 border border-emerald-500/10 text-emerald-200">• Debtors (Gharimin)</span>
+              <span className="p-1 rounded bg-emerald-950/60 border border-emerald-500/10 text-emerald-200">• Travelers in Need</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
     </div>
   );
 };

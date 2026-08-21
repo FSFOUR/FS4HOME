@@ -50,3 +50,19 @@ export const fetchPrayerTimes = async (location: string = "Malappuram, Kerala"):
     return null;
   }
 };
+
+export const fetchParetoAIInsight = async (paretoData: any, userStrategy?: string): Promise<string> => {
+  try {
+    const response = await fetch("/api/gemini/pareto-insight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paretoData, userStrategy })
+    });
+    const data = await response.json();
+    return data.text || '';
+  } catch (error) {
+    console.error("Pareto AI Insight Error:", error);
+    return "";
+  }
+};
+

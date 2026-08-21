@@ -1,8 +1,5 @@
-
 import React, { useState, useMemo } from 'react';
 import { AppState, Transaction, WealthType, KakeiboCategory, CategoryTarget, Reflection } from '../types';
-import { getMonthlyAdvisory } from '../services/geminiService';
-import MonthlySpendingChart from './MonthlySpendingChart';
 
 interface Props {
   state: AppState;
@@ -14,23 +11,34 @@ interface Props {
   onUpdateReflection: (type: 'weekly' | 'monthly', key: string, reflection: Reflection) => void;
 }
 
-const CATEGORY_META = {
-  [KakeiboCategory.NEEDS]: { color: 'amber', icon: '🟡', examples: 'groceries, transport, utilities' },
-  [KakeiboCategory.WANTS]: { color: 'emerald', icon: '🟢', examples: 'shopping, eating out, entertainment' },
-  [KakeiboCategory.CULTURE]: { color: 'blue', icon: '🔵', examples: 'books, courses, hobbies' },
-  [KakeiboCategory.UNEXPECTED]: { color: 'rose', icon: '🔴', examples: 'repairs, medical, emergencies' }
+const CATEGORY_ICONS: Record<KakeiboCategory, string> = {
+  [KakeiboCategory.NEEDS]: '🏠',
+  [KakeiboCategory.WANTS]: '🛍️',
+  [KakeiboCategory.CULTURE]: '📚',
+  [KakeiboCategory.UNEXPECTED]: '⚡',
 };
 
-const Transactions: React.FC<Props> = ({ state, onAddTransaction, onUpdateTransaction, onDeleteTransaction, onUpdateTarget, onUpdateMonthlyCategoryTarget, onUpdateReflection }) => {
+const Transactions: React.FC<Props> = ({ 
+  state, 
+  onAddTransaction, 
+  onUpdateTransaction, 
+  onDeleteTransaction 
+}) => {
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedMonth, setSelectedMonth] = useState<number | 'ALL'>(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedWeek, setSelectedWeek] = useState(1);
-  const [isGeneratingAdvisory, setIsGeneratingAdvisory] = useState(false);
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
+  const [filterType, setFilterType] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
-  // Rapid Entry State
-  const [quickEntry, setQuickEntry] = useState({
+  // Edit State
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBuffer, setEditBuffer] = useState<Transaction | null>(null);
+
+  // Quick Add State
+  const [newTx, setNewTx] = useState({
     description: '',
     amount: 0,
     type: WealthType.EXPENSE,
@@ -39,29 +47,25 @@ const Transactions: React.FC<Props> = ({ state, onAddTransaction, onUpdateTransa
     isRecurring: false
   });
 
-  const [filterCategory, setFilterCategory] = useState<KakeiboCategory | 'ALL'>('ALL');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editBuffer, setEditBuffer] = useState<Transaction | null>(null);
-
-  const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-  const weekKey = `${monthKey}-W${selectedWeek}`;
-
-  const handleQuickAdd = (e: React.FormEvent) => {
+  const handleCreateTransaction = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickEntry.description || quickEntry.amount <= 0) return;
-    onAddTransaction(quickEntry);
-    setQuickEntry({ ...quickEntry, description: '', amount: 0, isRecurring: false });
-    setShowQuickAdd(false);
+    if (!newTx.description || newTx.amount <= 0) return;
+    onAddTransaction(newTx);
+    setNewTx({
+      description: '',
+      amount: 0,
+      type: WealthType.EXPENSE,
+      kakeiboCategory: KakeiboCategory.NEEDS,
+      date: new Date().toISOString().split('T')[0],
+      isRecurring: false
+    });
+    setShowAddForm(false);
   };
 
-  const handleStartEdit = (t: Transaction) => {
+  const handleStartEdit = (t: Transaction, e: React.MouseEvent) => {
+    e.stopPropagation();
     setEditingId(t.id);
     setEditBuffer({ ...t });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditBuffer(null);
   };
 
   const handleSaveEdit = () => {
@@ -72,458 +76,482 @@ const Transactions: React.FC<Props> = ({ state, onAddTransaction, onUpdateTransa
     }
   };
 
-  const changeMonth = (offset: number) => {
-    let nextMonth = selectedMonth + offset;
-    let nextYear = selectedYear;
-    if (nextMonth > 11) { nextMonth = 0; nextYear++; } 
-    else if (nextMonth < 0) { nextMonth = 11; nextYear--; }
-    setSelectedMonth(nextMonth);
-    setSelectedYear(nextYear);
-  };
-
-  const selectedMonthData = useMemo(() => {
-    const transactions = state.transactions.filter(t => {
+  // Filter Logic
+  const filteredTransactions = useMemo(() => {
+    return state.transactions.filter(t => {
       const d = new Date(t.date);
-      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
-    });
-
-    const monthDate = new Date(selectedYear, selectedMonth, 1);
-    const monthName = monthDate.toLocaleDateString('en-IN', { month: 'long' });
-
-    const income = transactions.filter(t => t.type === WealthType.INCOME).reduce((acc, t) => acc + t.amount, 0);
-    const expenses = transactions.filter(t => t.type === WealthType.EXPENSE).reduce((acc, t) => acc + t.amount, 0);
-    const savings = income - expenses;
-
-    const spending: Record<string, number> = {
-      [KakeiboCategory.NEEDS]: 0,
-      [KakeiboCategory.WANTS]: 0,
-      [KakeiboCategory.CULTURE]: 0,
-      [KakeiboCategory.UNEXPECTED]: 0,
-    };
-
-    transactions.forEach(t => {
-      if (t.type === WealthType.EXPENSE && t.kakeiboCategory) {
-        spending[t.kakeiboCategory] += t.amount;
+      if (selectedMonth !== 'ALL' && (d.getMonth() !== selectedMonth || d.getFullYear() !== selectedYear)) {
+        return false;
       }
-    });
+      if (filterCategory !== 'ALL' && t.kakeiboCategory !== filterCategory) {
+        return false;
+      }
+      if (filterType !== 'ALL' && t.type !== filterType) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchDesc = t.description.toLowerCase().includes(q);
+        const matchAmt = t.amount.toString().includes(q);
+        const matchCat = t.kakeiboCategory?.toLowerCase().includes(q);
+        if (!matchDesc && !matchAmt && !matchCat) return false;
+      }
+      return true;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [state.transactions, selectedMonth, selectedYear, filterCategory, filterType, searchQuery]);
 
-    return { transactions, spending, monthName, income, expenses, savings };
-  }, [state.transactions, selectedMonth, selectedYear]);
+  // Aggregate stats
+  const totals = useMemo(() => {
+    const income = filteredTransactions.filter(t => t.type === WealthType.INCOME).reduce((acc, t) => acc + t.amount, 0);
+    const expense = filteredTransactions.filter(t => t.type === WealthType.EXPENSE).reduce((acc, t) => acc + t.amount, 0);
+    return { income, expense, net: income - expense, count: filteredTransactions.length };
+  }, [filteredTransactions]);
 
-  const filteredMonthTransactions = useMemo(() => {
-    const sorted = [...selectedMonthData.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    if (filterCategory === 'ALL') return sorted;
-    return sorted.filter(t => t.kakeiboCategory === filterCategory);
-  }, [selectedMonthData.transactions, filterCategory]);
-
-  const targets = state.monthlyTargets[monthKey] || {};
-  const weeklyRef = state.weeklyReflections[weekKey] || { q1: '', q2: '', q3: '', q4: '' };
-  const monthlyRef = state.monthlyReflections[monthKey] || { q1: '', q2: '', q3: '', q4: '', advisory: '' };
-
-  const handleWeeklyRefChange = (q: keyof Reflection, val: string) => {
-    onUpdateReflection('weekly', weekKey, { ...weeklyRef, [q]: val });
-  };
-
-  const handleMonthlyRefChange = (q: keyof Reflection, val: string) => {
-    onUpdateReflection('monthly', monthKey, { ...monthlyRef, [q]: val });
-  };
-
-  const generateAdvisory = async () => {
-    setIsGeneratingAdvisory(true);
-    const advisory = await getMonthlyAdvisory(monthKey, monthlyRef, selectedMonthData);
-    onUpdateReflection('monthly', monthKey, { ...monthlyRef, advisory });
-    setIsGeneratingAdvisory(false);
+  const exportCSV = () => {
+    const headers = ['Date', 'Description', 'Type', 'Category', 'Amount', 'Recurring'];
+    const rows = filteredTransactions.map(t => [
+      t.date,
+      `"${t.description.replace(/"/g, '""')}"`,
+      t.type,
+      t.kakeiboCategory || '',
+      t.amount,
+      t.isRecurring ? 'Yes' : 'No'
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csvContent));
+    link.setAttribute('download', `fs4home_transactions_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   return (
-    <div className="space-y-6 md:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-24 px-2 md:px-0">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-3.5 max-w-6xl mx-auto text-slate-100 animate-in fade-in duration-200 pb-16">
+      
+      {/* Header & Quick Action Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-emerald-500/20 pb-3">
         <div>
-          <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight">Finance Portal</h2>
-          <p className="text-[10px] md:text-sm text-lime-400 font-bold uppercase tracking-widest mt-1">Ethical Budgeting & Planning</p>
+          <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">Transactions & Records</h1>
+          <p className="text-xs text-emerald-300/70">Complete audit log, progressive filtering, and rapid reconciliation</p>
         </div>
-        <div className="w-full md:w-auto flex items-center justify-between gap-4 glass-card p-3 md:p-4 rounded-2xl border border-lime-500/20 shadow-lg">
-          <div className="flex flex-col">
-            <span className="text-[9px] md:text-[10px] font-black text-emerald-300/80 uppercase tracking-widest">Savings Goal</span>
-            <div className="flex items-center gap-1">
-              <span className="text-lime-400 font-black text-base md:text-lg">₹</span>
-              <input 
-                type="number" 
-                value={state.monthlySavingsTarget}
-                onChange={(e) => onUpdateTarget(Number(e.target.value))}
-                className="w-20 md:w-24 font-black text-white focus:outline-none bg-transparent text-base md:text-lg"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportCSV}
+            className="px-2.5 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/20 hover:border-lime-400/40 text-emerald-300 text-xs font-bold transition-colors"
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="px-3 py-1.5 rounded-xl bg-lime-400 text-emerald-950 text-xs font-black hover:bg-lime-300 shadow-sm glow-lime-sm transition-all"
+          >
+            {showAddForm ? 'Close Form' : '+ New Entry'}
+          </button>
+        </div>
+      </div>
+
+      {/* Summary KPI Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="glass-card p-2.5 rounded-xl border border-emerald-500/20">
+          <span className="text-[10px] text-emerald-300/70 font-bold uppercase block">Filtered Income</span>
+          <span className="text-base font-black text-lime-400">₹{totals.income.toLocaleString()}</span>
+        </div>
+        <div className="glass-card p-2.5 rounded-xl border border-emerald-500/20">
+          <span className="text-[10px] text-emerald-300/70 font-bold uppercase block">Filtered Expenses</span>
+          <span className="text-base font-black text-rose-400">₹{totals.expense.toLocaleString()}</span>
+        </div>
+        <div className="glass-card p-2.5 rounded-xl border border-emerald-500/20">
+          <span className="text-[10px] text-emerald-300/70 font-bold uppercase block">Net Cashflow</span>
+          <span className="text-base font-black text-white">₹{totals.net.toLocaleString()}</span>
+        </div>
+        <div className="glass-card p-2.5 rounded-xl border border-emerald-500/20">
+          <span className="text-[10px] text-emerald-300/70 font-bold uppercase block">Total Records</span>
+          <span className="text-base font-black text-emerald-200">{totals.count} Entries</span>
+        </div>
+      </div>
+
+      {/* Quick Add Collapsible Form */}
+      {showAddForm && (
+        <form onSubmit={handleCreateTransaction} className="glass-card p-3.5 md:p-4 rounded-2xl border border-lime-400/40 space-y-3">
+          <div className="flex items-center justify-between border-b border-emerald-500/15 pb-2">
+            <span className="text-xs font-black text-lime-300 uppercase">Fast Transaction Entry</span>
+            <span className="text-[10px] text-emerald-400/60 font-mono">10-second fast entry</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
+            <div className="sm:col-span-2">
+              <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">Description</label>
+              <input
+                type="text"
+                placeholder="e.g. Grocery Store, Client Payment"
+                value={newTx.description}
+                onChange={(e) => setNewTx({ ...newTx, description: e.target.value })}
+                className="w-full px-2.5 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white font-bold outline-none focus:border-lime-400"
+                required
               />
             </div>
-          </div>
-          <div className="h-8 w-px bg-lime-500/20" />
-          <div className="bg-lime-400/10 border border-lime-400/20 px-3 py-1 rounded-full shrink-0">
-            <span className="text-[9px] md:text-[10px] font-black text-lime-400 uppercase tracking-tight">Active Plan</span>
-          </div>
-        </div>
-      </div>
-      
-      <MonthlySpendingChart spending={selectedMonthData.spending} targets={targets} />
-
-      {/* MONTHLY BUDGET PLANNER MAIN VIEW */}
-      <section className="bg-[#0F172A] text-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] shadow-2xl relative overflow-hidden ring-1 ring-white/10">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full -mr-48 -mt-48 blur-[100px] pointer-events-none" />
-        
-        <div className="relative z-10 space-y-6 md:space-y-10">
-          <div className="flex flex-col gap-6 md:gap-8 border-b border-white/10 pb-6 md:pb-8">
-            <div className="flex justify-between items-center w-full">
-              <button onClick={() => changeMonth(-1)} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full transition-colors">
-                <svg className="w-5 h-5 md:w-6 md:h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              <div className="text-center">
-                <h3 className="text-xl md:text-5xl font-black tracking-tighter">{selectedMonthData.monthName} <span className="text-emerald-500">{selectedYear}</span></h3>
-                <p className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-1">Monthly Ledger Overview</p>
-              </div>
-              <button onClick={() => changeMonth(1)} className="p-1.5 md:p-2 hover:bg-white/10 rounded-full transition-colors">
-                <svg className="w-5 h-5 md:w-6 md:h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
-              </button>
-            </div>
-            
-            <div className="flex overflow-x-auto no-scrollbar gap-2 bg-white/5 p-1.5 md:p-2 rounded-[1.25rem] md:rounded-[1.5rem] border border-white/5 backdrop-blur-md">
-              <button onClick={() => setFilterCategory('ALL')} className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black transition-all whitespace-nowrap ${filterCategory === 'ALL' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-400 hover:text-white'}`}>
-                ALL ENTRIES
-              </button>
-              {[KakeiboCategory.NEEDS, KakeiboCategory.WANTS, KakeiboCategory.CULTURE, KakeiboCategory.UNEXPECTED].map((cat) => {
-                const meta = CATEGORY_META[cat];
-                return (
-                  <button key={cat} onClick={() => setFilterCategory(cat)} className={`px-4 md:px-5 py-2 rounded-xl text-[9px] md:text-[10px] font-black transition-all flex items-center gap-1.5 md:gap-2 whitespace-nowrap ${filterCategory === cat ? `bg-${meta.color}-500 text-white shadow-lg` : `text-slate-500 hover:text-white`}`}>
-                    <span>{meta.icon}</span>{cat.split(' ')[0]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            {[KakeiboCategory.NEEDS, KakeiboCategory.WANTS, KakeiboCategory.CULTURE, KakeiboCategory.UNEXPECTED].map((cat) => {
-              const target = targets[cat] || { amount: 0, targetDate: '' };
-              const spent = selectedMonthData.spending[cat] || 0;
-              const percentage = target.amount > 0 ? Math.min(100, (spent / target.amount) * 100) : 0;
-              const meta = CATEGORY_META[cat];
-              const colorClasses = {
-                amber: { text: 'text-amber-400', progress: 'bg-amber-500', shadow: 'shadow-amber-500/10' },
-                emerald: { text: 'text-emerald-400', progress: 'bg-emerald-500', shadow: 'shadow-emerald-500/10' },
-                blue: { text: 'text-blue-400', progress: 'bg-blue-500', shadow: 'shadow-blue-500/10' },
-                rose: { text: 'text-rose-400', progress: 'bg-rose-500', shadow: 'shadow-rose-500/10' },
-              }[meta.color];
-              return (
-                <div key={cat} className={`bg-white/5 border-2 p-5 md:p-7 rounded-[1.5rem] md:rounded-[2.5rem] transition-all border-white/5 hover:bg-white/[0.08] ${filterCategory === cat ? `border-${meta.color}-500/50 ${colorClasses.shadow}` : ''}`}>
-                  <div className="flex justify-between items-start mb-4 md:mb-6">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs md:text-sm">{meta.icon}</span>
-                      <h4 className={`font-black text-[10px] md:text-xs ${colorClasses.text} uppercase tracking-widest`}>{cat}</h4>
-                      {target.amount > 0 && (spent / target.amount) >= 0.8 && (
-                        <span className="text-[8px] bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded-full font-black uppercase">Near Limit</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-4 md:space-y-6">
-                    <div className="space-y-1">
-                       <label className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">Plan Limit</label>
-                       <div className="flex items-center gap-2 border-b border-white/10 pb-1">
-                          <span className="text-slate-500 font-black text-lg md:text-xl">₹</span>
-                          <input type="number" className="bg-transparent outline-none w-full font-black text-xl md:text-2xl text-white" value={target.amount || ''} placeholder="0" onChange={(e) => onUpdateMonthlyCategoryTarget(monthKey, cat, { ...target, amount: Number(e.target.value) })} />
-                       </div>
-                    </div>
-                    <div className="w-full bg-white/5 h-1.5 md:h-2 rounded-full overflow-hidden">
-                       <div className={`h-full transition-all duration-1000 ${percentage > 90 ? 'bg-rose-500' : colorClasses.progress}`} style={{ width: `${percentage}%` }} />
-                    </div>
-                    <div className="flex justify-between items-end pt-1 md:pt-2">
-                      <div className="space-y-0.5"><span className="text-[8px] md:text-[9px] font-bold text-slate-500">Actual</span><p className="font-black text-white text-sm md:text-lg">₹{spent.toLocaleString()}</p></div>
-                      <div className="text-right space-y-0.5"><span className="text-[8px] md:text-[9px] font-bold text-slate-500">Remaining</span><p className={`font-black text-sm md:text-lg ${target.amount - spent < 0 ? 'text-rose-400' : colorClasses.text}`}>₹{Math.max(0, target.amount - spent).toLocaleString()}</p></div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* SPREADSHEET LEDGER - Mobile Optimized */}
-          <div className="bg-white/5 border border-white/10 rounded-[1.5rem] md:rounded-[3rem] overflow-hidden backdrop-blur-sm shadow-2xl">
-            <div className="px-5 md:px-10 py-5 md:py-8 border-b border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/[0.03]">
-              <div>
-                <h4 className="font-black text-sm md:text-lg text-white tracking-tight uppercase">Monthly Ledger</h4>
-                <p className="text-[8px] md:text-[10px] text-slate-500 font-bold tracking-widest uppercase mt-0.5">Spreadsheet View</p>
-              </div>
-              <div className="flex gap-2 w-full md:w-auto">
-                <div className="flex-1 md:flex-none px-3 md:px-5 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl md:rounded-2xl flex flex-col items-end">
-                   <span className="text-[8px] md:text-[9px] font-black text-emerald-500 uppercase">Income</span>
-                   <span className="font-black text-sm md:text-lg">₹{selectedMonthData.income.toLocaleString()}</span>
-                </div>
-                <div className="flex-1 md:flex-none px-3 md:px-5 py-2 bg-rose-500/10 border border-rose-500/20 rounded-xl md:rounded-2xl flex flex-col items-end">
-                   <span className="text-[8px] md:text-[9px] font-black text-rose-500 uppercase">Expense</span>
-                   <span className="font-black text-sm md:text-lg">₹{selectedMonthData.expenses.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Desktop Table */}
-            <div className="hidden md:block max-h-[700px] overflow-y-auto no-scrollbar">
-              <table className="w-full text-left border-collapse">
-                <thead className="sticky top-0 bg-[#161d2f] z-20 shadow-xl">
-                  <tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-white/10">
-                    <th className="px-10 py-6 border-r border-white/5">Date</th>
-                    <th className="px-10 py-6 border-r border-white/5">Description</th>
-                    <th className="px-10 py-6 border-r border-white/5">Category</th>
-                    <th className="px-10 py-6 border-r border-white/5 text-right">Amount (₹)</th>
-                    <th className="px-10 py-6 text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10">
-                  <tr className="bg-emerald-500/[0.03] group">
-                    <td className="px-8 py-4 border-r border-white/5">
-                      <input type="date" className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none w-full font-bold" value={quickEntry.date} onChange={e => setQuickEntry({...quickEntry, date: e.target.value})} />
-                    </td>
-                    <td className="px-8 py-4 border-r border-white/5">
-                      <input type="text" placeholder="Description..." className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none w-full font-bold" value={quickEntry.description} onChange={e => setQuickEntry({...quickEntry, description: e.target.value})} />
-                    </td>
-                    <td className="px-8 py-4 border-r border-white/5">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                          <select className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none font-black uppercase flex-1" value={quickEntry.type} onChange={e => setQuickEntry({...quickEntry, type: e.target.value as WealthType})}>
-                            {Object.values(WealthType).map(t => <option key={t} value={t} className="bg-[#0F172A]">{t}</option>)}
-                          </select>
-                          <select className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none font-black uppercase flex-1" value={quickEntry.kakeiboCategory} onChange={e => setQuickEntry({...quickEntry, kakeiboCategory: e.target.value as KakeiboCategory})}>
-                            {Object.values(KakeiboCategory).map(c => <option key={c} value={c} className="bg-[#0F172A]">{c}</option>)}
-                          </select>
-                        </div>
-                        <label className="flex items-center gap-2 cursor-pointer group/recur">
-                          <input 
-                            type="checkbox" 
-                            checked={quickEntry.isRecurring} 
-                            onChange={e => setQuickEntry({...quickEntry, isRecurring: e.target.checked})}
-                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-emerald-500 focus:ring-0 focus:ring-offset-0"
-                          />
-                          <span className="text-[9px] font-black text-slate-400 group-hover/recur:text-emerald-400 uppercase tracking-widest transition-colors">Recurring Transaction</span>
-                        </label>
-                      </div>
-                    </td>
-                    <td className="px-8 py-4 border-r border-white/5">
-                      <input type="number" placeholder="0" className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none w-full text-right font-black" value={quickEntry.amount || ''} onChange={e => setQuickEntry({...quickEntry, amount: Number(e.target.value)})} />
-                    </td>
-                    <td className="px-8 py-4 text-center">
-                      <button onClick={handleQuickAdd} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95">Add</button>
-                    </td>
-                  </tr>
-                  {filteredMonthTransactions.map(t => {
-                    const isEditing = editingId === t.id;
-                    const meta = t.kakeiboCategory ? CATEGORY_META[t.kakeiboCategory] : null;
-                    const isPositive = t.type === WealthType.INCOME || t.type === WealthType.ASSET;
-                    return (
-                      <tr key={t.id} className={`transition-all group ${isEditing ? 'bg-white/10' : 'hover:bg-white/[0.03]'}`}>
-                        <td className="px-10 py-6 border-r border-white/5">
-                          {isEditing ? <input type="date" className="bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white outline-none w-full font-bold" value={editBuffer?.date} onChange={e => setEditBuffer(prev => prev ? {...prev, date: e.target.value} : null)} /> : <span className="font-black text-slate-300 text-sm">{new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>}
-                        </td>
-                        <td className="px-10 py-6 border-r border-white/5">
-                          {isEditing ? <input type="text" className="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm text-white outline-none w-full font-bold" value={editBuffer?.description} onChange={e => setEditBuffer(prev => prev ? {...prev, description: e.target.value} : null)} /> : <div className="flex items-center gap-3"><span className="text-lg">{meta?.icon || '📑'}</span><span className="font-bold text-sm text-slate-100">{t.description}</span></div>}
-                        </td>
-                        <td className="px-10 py-6 border-r border-white/5">
-                          {isEditing ? (
-                            <div className="flex flex-col gap-2">
-                              <select className="bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[10px] text-white outline-none w-full font-black uppercase" value={editBuffer?.kakeiboCategory} onChange={e => setEditBuffer(prev => prev ? {...prev, kakeiboCategory: e.target.value as KakeiboCategory} : null)}>{Object.values(KakeiboCategory).map(c => <option key={c} value={c} className="bg-[#0F172A]">{c}</option>)}</select>
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <input 
-                                  type="checkbox" 
-                                  checked={editBuffer?.isRecurring} 
-                                  onChange={e => setEditBuffer(prev => prev ? {...prev, isRecurring: e.target.checked} : null)}
-                                  className="w-3 h-3 rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-0"
-                                />
-                                <span className="text-[8px] font-black text-slate-400 uppercase">Recurring</span>
-                              </label>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col gap-1">
-                              <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg border w-fit ${t.kakeiboCategory === KakeiboCategory.NEEDS ? 'border-amber-500/30 text-amber-400' : t.kakeiboCategory === KakeiboCategory.WANTS ? 'border-emerald-500/30 text-emerald-400' : t.kakeiboCategory === KakeiboCategory.CULTURE ? 'border-blue-500/30 text-blue-400' : 'border-rose-500/30 text-rose-400'}`}>{t.kakeiboCategory}</span>
-                              {t.isRecurring && <span className="text-[8px] font-black text-emerald-500/70 uppercase flex items-center gap-1">🔄 Recurring</span>}
-                            </div>
-                          )}
-                        </td>
-                        <td className={`px-10 py-6 border-r border-white/5 text-right font-black text-xl ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {isEditing ? <input type="number" className="bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-right text-lg text-white outline-none w-28 font-black" value={editBuffer?.amount} onChange={e => setEditBuffer(prev => prev ? {...prev, amount: Number(e.target.value)} : null)} /> : <span>{isPositive ? '+' : '-'}₹{t.amount.toLocaleString()}</span>}
-                        </td>
-                        <td className="px-10 py-6">
-                          <div className="flex items-center justify-center gap-2">
-                            {isEditing ? <button onClick={handleSaveEdit} className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/40">✓</button> : <button onClick={() => handleStartEdit(t)} className="p-2 text-slate-500 hover:text-white">✎</button>}
-                            <button onClick={() => onDeleteTransaction(t.id)} className="p-2 text-rose-500/50 hover:text-rose-400">✕</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden">
-               <div className="p-4 border-b border-white/10 bg-emerald-500/5">
-                  <button 
-                    onClick={() => setShowQuickAdd(!showQuickAdd)}
-                    className="w-full bg-emerald-600 text-white font-black py-3 rounded-xl uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
-                  >
-                    {showQuickAdd ? '✕ Cancel Entry' : '＋ Add New Entry'}
-                  </button>
-                  {showQuickAdd && (
-                    <form onSubmit={handleQuickAdd} className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <input type="text" placeholder="What did you spend on?" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-500 font-bold" value={quickEntry.description} onChange={e => setQuickEntry({...quickEntry, description: e.target.value})} />
-                      <div className="grid grid-cols-2 gap-3">
-                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xs">₹</span>
-                            <input type="number" placeholder="Amount" className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-500 font-black" value={quickEntry.amount || ''} onChange={e => setQuickEntry({...quickEntry, amount: Number(e.target.value)})} />
-                         </div>
-                         <input type="date" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white outline-none focus:ring-2 focus:ring-emerald-500 font-bold" value={quickEntry.date} onChange={e => setQuickEntry({...quickEntry, date: e.target.value})} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] text-white outline-none font-black uppercase" value={quickEntry.type} onChange={e => setQuickEntry({...quickEntry, type: e.target.value as WealthType})}>
-                           {Object.values(WealthType).map(t => <option key={t} value={t} className="bg-[#0F172A]">{t}</option>)}
-                        </select>
-                        <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] text-white outline-none font-black uppercase" value={quickEntry.kakeiboCategory} onChange={e => setQuickEntry({...quickEntry, kakeiboCategory: e.target.value as KakeiboCategory})}>
-                           {Object.values(KakeiboCategory).map(c => <option key={c} value={c} className="bg-[#0F172A]">{c}</option>)}
-                        </select>
-                      </div>
-                      <label className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3 cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          checked={quickEntry.isRecurring} 
-                          onChange={e => setQuickEntry({...quickEntry, isRecurring: e.target.checked})}
-                          className="w-5 h-5 rounded border-white/10 bg-white/5 text-emerald-500 focus:ring-0"
-                        />
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Recurring Transaction</span>
-                      </label>
-                      <button type="submit" className="w-full bg-white text-slate-900 font-black py-4 rounded-xl uppercase tracking-widest text-xs shadow-xl active:scale-95">Record Transaction</button>
-                    </form>
-                  )}
-               </div>
-               <div className="divide-y divide-white/5">
-                  {filteredMonthTransactions.map(t => {
-                    const meta = t.kakeiboCategory ? CATEGORY_META[t.kakeiboCategory] : null;
-                    const isPositive = t.type === WealthType.INCOME || t.type === WealthType.ASSET;
-                    return (
-                      <div key={t.id} className="p-4 flex items-center justify-between group active:bg-white/5 transition-colors">
-                        <div className="flex items-center gap-3">
-                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${isPositive ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
-                             {meta?.icon || '📑'}
-                           </div>
-                           <div>
-                              <p className="font-bold text-slate-100 text-sm">{t.description}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                 <span className="text-[9px] font-black text-slate-500 uppercase">{new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
-                                 <span className="w-1 h-1 rounded-full bg-slate-700" />
-                                 <span className="text-[9px] font-black text-slate-500 uppercase">{t.kakeiboCategory || 'Misc'}</span>
-                                 {t.isRecurring && (
-                                   <>
-                                     <span className="w-1 h-1 rounded-full bg-slate-700" />
-                                     <span className="text-[9px] font-black text-emerald-500/70 uppercase">🔄 Recurring</span>
-                                   </>
-                                 )}
-                              </div>
-                           </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                           <span className={`font-black text-base ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                             {isPositive ? '+' : '-'}₹{t.amount.toLocaleString()}
-                           </span>
-                           <div className="flex gap-2">
-                              <button onClick={() => onDeleteTransaction(t.id)} className="p-1.5 text-rose-500/40 active:text-rose-500 transition-colors">✕</button>
-                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {filteredMonthTransactions.length === 0 && (
-                    <div className="p-12 text-center text-slate-500 font-bold uppercase text-[10px] tracking-widest opacity-50">No records found</div>
-                  )}
-               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Reflections Zone - Stacked on Mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        <div className="glass-card rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-xl border border-lime-500/20 flex flex-col">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
             <div>
-              <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">Weekly Audit</h3>
-              <p className="text-[9px] md:text-xs text-lime-400 font-bold uppercase tracking-widest mt-0.5 md:mt-1">Self-correction habits</p>
+              <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">Amount (₹)</label>
+              <input
+                type="number"
+                placeholder="0"
+                value={newTx.amount || ''}
+                onChange={(e) => setNewTx({ ...newTx, amount: Number(e.target.value) })}
+                className="w-full px-2.5 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-lime-400 font-black outline-none focus:border-lime-400"
+                required
+              />
             </div>
-            <div className="flex overflow-x-auto no-scrollbar gap-1 bg-emerald-950/60 p-1 rounded-xl border border-emerald-500/20 w-full sm:w-auto">
-              {[1, 2, 3, 4, 5].map(w => (
-                <button key={w} onClick={() => setSelectedWeek(w)} className={`flex-1 sm:flex-none px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black transition-all ${selectedWeek === w ? 'bg-lime-400 text-emerald-950 shadow-lg' : 'text-emerald-300/60'}`}>W{w}</button>
-              ))}
+            <div>
+              <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">Type</label>
+              <select
+                value={newTx.type}
+                onChange={(e) => setNewTx({ ...newTx, type: e.target.value as WealthType })}
+                className="w-full px-2.5 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white font-bold outline-none focus:border-lime-400"
+              >
+                <option value={WealthType.EXPENSE}>Expense</option>
+                <option value={WealthType.INCOME}>Income</option>
+                <option value={WealthType.ASSET}>Asset / Investment</option>
+                <option value={WealthType.LIABILITY}>Liability / Debt</option>
+              </select>
             </div>
-          </div>
-          <div className="space-y-5 md:space-y-6 flex-1">
-            {[
-              { id: 'q1', label: 'Spending this week?', icon: '💰' },
-              { id: 'q2', label: 'Where did it go?', icon: '📉' },
-              { id: 'q3', label: 'Unnecessary buys?', icon: '🛒' },
-              { id: 'q4', label: 'Next week goal?', icon: '🚀' }
-            ].map((q) => (
-              <div key={q.id} className="space-y-1.5">
-                <label className="text-[9px] md:text-[10px] font-black text-emerald-300/80 uppercase tracking-widest flex items-center gap-2">
-                  <span className="text-sm md:text-base">{q.icon}</span> {q.label}
-                </label>
-                <textarea 
-                  className="w-full bg-emerald-950/50 border border-emerald-500/20 rounded-2xl md:rounded-3xl p-4 md:p-5 text-xs md:text-sm font-medium focus:bg-emerald-950/80 focus:ring-2 focus:ring-lime-400/40 text-white outline-none transition-all resize-none h-20 md:h-24 placeholder-emerald-400/30" 
-                  placeholder="Journal your weekly summary..."
-                  value={(weeklyRef as any)[q.id]}
-                  onChange={(e) => handleWeeklyRefChange(q.id as any, e.target.value)}
+            <div>
+              <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">Category</label>
+              <select
+                value={newTx.kakeiboCategory}
+                onChange={(e) => setNewTx({ ...newTx, kakeiboCategory: e.target.value as KakeiboCategory })}
+                className="w-full px-2.5 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white font-bold outline-none focus:border-lime-400"
+              >
+                <option value={KakeiboCategory.NEEDS}>Essential Needs</option>
+                <option value={KakeiboCategory.WANTS}>Lifestyle Wants</option>
+                <option value={KakeiboCategory.CULTURE}>Culture & Growth</option>
+                <option value={KakeiboCategory.UNEXPECTED}>Unexpected</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">Date</label>
+              <input
+                type="date"
+                value={newTx.date}
+                onChange={(e) => setNewTx({ ...newTx, date: e.target.value })}
+                className="w-full px-2.5 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white font-bold outline-none focus:border-lime-400"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-4">
+              <label className="flex items-center gap-1.5 text-xs text-emerald-200 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newTx.isRecurring}
+                  onChange={(e) => setNewTx({ ...newTx, isRecurring: e.target.checked })}
+                  className="accent-lime-400 w-3.5 h-3.5"
                 />
-              </div>
-            ))}
+                <span>Recurring Monthly</span>
+              </label>
+            </div>
+            <div className="flex justify-end items-end gap-2">
+              <button
+                type="submit"
+                className="w-full py-1.5 bg-lime-400 text-emerald-950 text-xs font-black rounded-lg hover:bg-lime-300 shadow-md transition-colors"
+              >
+                Save Record
+              </button>
+            </div>
           </div>
+        </form>
+      )}
+
+      {/* Filter Toolbar */}
+      <div className="glass-card p-3 rounded-xl border border-emerald-500/20 space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+          {/* Search */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search description, amount..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-7 pr-3 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white text-xs font-medium outline-none focus:border-lime-400"
+            />
+            <span className="absolute left-2.5 top-2 text-emerald-400/60 text-xs">🔍</span>
+          </div>
+
+          {/* Month Selector */}
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+            className="w-full px-2.5 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white text-xs font-bold outline-none focus:border-lime-400"
+          >
+            <option value="ALL">All Months</option>
+            {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m, idx) => (
+              <option key={m} value={idx}>{m} {selectedYear}</option>
+            ))}
+          </select>
+
+          {/* Category Selector */}
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="w-full px-2.5 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white text-xs font-bold outline-none focus:border-lime-400"
+          >
+            <option value="ALL">All Categories</option>
+            <option value={KakeiboCategory.NEEDS}>Needs (Essential)</option>
+            <option value={KakeiboCategory.WANTS}>Wants (Lifestyle)</option>
+            <option value={KakeiboCategory.CULTURE}>Culture & Learning</option>
+            <option value={KakeiboCategory.UNEXPECTED}>Unexpected</option>
+          </select>
+
+          {/* Type Selector */}
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="w-full px-2.5 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white text-xs font-bold outline-none focus:border-lime-400"
+          >
+            <option value="ALL">All Types</option>
+            <option value={WealthType.EXPENSE}>Expense Only</option>
+            <option value={WealthType.INCOME}>Income Only</option>
+            <option value={WealthType.ASSET}>Asset</option>
+            <option value={WealthType.LIABILITY}>Liability</option>
+          </select>
         </div>
 
-        <div className="bg-[#0F172A] text-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative overflow-hidden ring-1 ring-white/10 flex flex-col">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full -mr-32 -mt-32 blur-[100px] pointer-events-none" />
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
-            <div>
-              <h3 className="text-xl md:text-2xl font-black tracking-tight text-white uppercase">Monthly Audit</h3>
-              <p className="text-[9px] md:text-xs text-slate-500 font-bold uppercase tracking-widest mt-0.5 md:mt-1">Philosophy</p>
-            </div>
-            <button 
-              onClick={generateAdvisory}
-              disabled={isGeneratingAdvisory}
-              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-5 py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all"
+        {/* Active Filter Chips */}
+        {(filterCategory !== 'ALL' || filterType !== 'ALL' || selectedMonth !== 'ALL' || searchQuery) && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[10px]">
+            <span className="text-emerald-300/60 font-semibold">Active:</span>
+            {searchQuery && (
+              <span className="px-2 py-0.5 rounded-md bg-lime-400/15 border border-lime-400/30 text-lime-300 flex items-center gap-1">
+                "{searchQuery}" <button onClick={() => setSearchQuery('')}>×</button>
+              </span>
+            )}
+            {filterCategory !== 'ALL' && (
+              <span className="px-2 py-0.5 rounded-md bg-lime-400/15 border border-lime-400/30 text-lime-300 flex items-center gap-1">
+                Cat: {filterCategory} <button onClick={() => setFilterCategory('ALL')}>×</button>
+              </span>
+            )}
+            {filterType !== 'ALL' && (
+              <span className="px-2 py-0.5 rounded-md bg-lime-400/15 border border-lime-400/30 text-lime-300 flex items-center gap-1">
+                Type: {filterType} <button onClick={() => setFilterType('ALL')}>×</button>
+              </span>
+            )}
+            {selectedMonth !== 'ALL' && (
+              <span className="px-2 py-0.5 rounded-md bg-lime-400/15 border border-lime-400/30 text-lime-300 flex items-center gap-1">
+                Month: {selectedMonth + 1}/{selectedYear} <button onClick={() => setSelectedMonth('ALL')}>×</button>
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setFilterCategory('ALL');
+                setFilterType('ALL');
+                setSelectedMonth('ALL');
+                setSearchQuery('');
+              }}
+              className="text-emerald-400 underline hover:text-white ml-1 font-bold"
             >
-              {isGeneratingAdvisory ? 'Analyzing...' : '✨ Optimize'}
+              Clear all
             </button>
           </div>
-          
-          <div className="space-y-5 md:space-y-6 flex-1 relative z-10">
-            {[
-              { id: 'q1', label: 'Starting balance?', icon: '🏦' },
-              { id: 'q2', label: 'Total spent?', icon: '💸' },
-              { id: 'q3', label: 'Target saved?', icon: '🌱' },
-              { id: 'q4', label: 'Improvement plan?', icon: '🧗' }
-            ].map((q) => (
-              <div key={q.id} className="space-y-1.5">
-                <label className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <span className="text-sm md:text-base">{q.icon}</span> {q.label}
-                </label>
-                <textarea 
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-5 text-xs md:text-sm font-medium focus:bg-white/10 outline-none transition-all resize-none h-20 md:h-24 placeholder-slate-700 text-slate-200" 
-                  placeholder="Analyze your month..."
-                  value={(monthlyRef as any)[q.id]}
-                  onChange={(e) => handleMonthlyRefChange(q.id as any, e.target.value)}
-                />
-              </div>
-            ))}
-
-            <div className="mt-6 md:mt-8 p-6 md:p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-[1.5rem] md:rounded-[2.5rem] relative">
-              <span className="absolute -top-3 left-4 md:left-8 bg-emerald-600 text-white text-[8px] md:text-[9px] font-black px-3 md:px-4 py-1 rounded-full uppercase tracking-widest">Kakeibo Strategy</span>
-              <p className="text-[11px] md:text-sm text-emerald-100 leading-relaxed italic font-medium opacity-90">
-                {monthlyRef.advisory || "Complete the audit to receive AI-powered financial strategy for next month."}
-              </p>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
+
+      {/* Desktop Transaction Table (md and above) */}
+      <div className="hidden md:block glass-card rounded-2xl border border-emerald-500/20 overflow-hidden shadow-lg">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-emerald-500/20 bg-emerald-950/60 text-emerald-300/80 font-bold uppercase text-[10px] tracking-wider">
+              <th className="px-4 py-2.5">Date</th>
+              <th className="px-4 py-2.5">Description</th>
+              <th className="px-4 py-2.5">Category</th>
+              <th className="px-4 py-2.5">Type</th>
+              <th className="px-4 py-2.5 text-right">Amount</th>
+              <th className="px-4 py-2.5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-emerald-500/10">
+            {filteredTransactions.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-emerald-300/60">
+                  No transactions match your filter criteria.
+                </td>
+              </tr>
+            ) : (
+              filteredTransactions.map((t) => {
+                const isIncome = t.type === WealthType.INCOME;
+                const isEditing = editingId === t.id;
+
+                if (isEditing && editBuffer) {
+                  return (
+                    <tr key={t.id} className="bg-emerald-900/40">
+                      <td className="px-3 py-2">
+                        <input
+                          type="date"
+                          value={editBuffer.date}
+                          onChange={(e) => setEditBuffer({ ...editBuffer, date: e.target.value })}
+                          className="w-full bg-[#061f12] border border-lime-400 px-1.5 py-1 rounded text-white text-xs"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="text"
+                          value={editBuffer.description}
+                          onChange={(e) => setEditBuffer({ ...editBuffer, description: e.target.value })}
+                          className="w-full bg-[#061f12] border border-lime-400 px-1.5 py-1 rounded text-white text-xs font-bold"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={editBuffer.kakeiboCategory}
+                          onChange={(e) => setEditBuffer({ ...editBuffer, kakeiboCategory: e.target.value as KakeiboCategory })}
+                          className="bg-[#061f12] border border-lime-400 px-1.5 py-1 rounded text-white text-xs"
+                        >
+                          <option value={KakeiboCategory.NEEDS}>Needs</option>
+                          <option value={KakeiboCategory.WANTS}>Wants</option>
+                          <option value={KakeiboCategory.CULTURE}>Culture</option>
+                          <option value={KakeiboCategory.UNEXPECTED}>Unexpected</option>
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={editBuffer.type}
+                          onChange={(e) => setEditBuffer({ ...editBuffer, type: e.target.value as WealthType })}
+                          className="bg-[#061f12] border border-lime-400 px-1.5 py-1 rounded text-white text-xs"
+                        >
+                          <option value={WealthType.EXPENSE}>Expense</option>
+                          <option value={WealthType.INCOME}>Income</option>
+                        </select>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <input
+                          type="number"
+                          value={editBuffer.amount}
+                          onChange={(e) => setEditBuffer({ ...editBuffer, amount: Number(e.target.value) })}
+                          className="w-24 bg-[#061f12] border border-lime-400 px-1.5 py-1 rounded text-lime-300 text-xs font-black text-right"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-right space-x-1">
+                        <button onClick={handleSaveEdit} className="text-lime-400 font-bold hover:underline">Save</button>
+                        <button onClick={() => setEditingId(null)} className="text-emerald-400 hover:underline">Cancel</button>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return (
+                  <tr key={t.id} className="hover:bg-emerald-950/40 transition-colors">
+                    <td className="px-4 py-2.5 text-emerald-300/70 font-mono whitespace-nowrap">
+                      {new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-4 py-2.5 font-bold text-white">
+                      <div className="flex items-center gap-1.5">
+                        <span>{t.description}</span>
+                        {t.isRecurring && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-900 text-emerald-300 font-normal">
+                            Recurring
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/20 text-[10px] font-bold text-emerald-200">
+                        <span>{t.kakeiboCategory ? CATEGORY_ICONS[t.kakeiboCategory] : '🏷️'}</span>
+                        <span>{t.kakeiboCategory || 'General'}</span>
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-emerald-300/80 font-medium">
+                      {t.type}
+                    </td>
+                    <td className={`px-4 py-2.5 text-right font-black text-xs ${isIncome ? 'text-lime-400' : 'text-white'}`}>
+                      {isIncome ? '+' : '-'}₹{t.amount.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-2.5 text-right space-x-2 whitespace-nowrap">
+                      <button
+                        onClick={(e) => handleStartEdit(t, e)}
+                        className="text-[11px] text-emerald-400 hover:text-white font-bold transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => onDeleteTransaction(t.id)}
+                        className="text-[11px] text-rose-400/80 hover:text-rose-300 font-bold transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile Transaction List (Expandable Rows for Progressive Disclosure) */}
+      <div className="md:hidden space-y-2">
+        {filteredTransactions.length === 0 ? (
+          <div className="glass-card p-6 rounded-xl text-center text-emerald-300/60 text-xs">
+            No transactions found.
+          </div>
+        ) : (
+          filteredTransactions.map((t) => {
+            const isIncome = t.type === WealthType.INCOME;
+            const isExpanded = expandedRowId === t.id;
+            const icon = t.kakeiboCategory ? CATEGORY_ICONS[t.kakeiboCategory] : '💳';
+
+            return (
+              <div
+                key={t.id}
+                onClick={() => setExpandedRowId(isExpanded ? null : t.id)}
+                className="glass-card p-3 rounded-xl border border-emerald-500/20 space-y-2 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-base">{icon}</span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate">{t.description}</div>
+                      <div className="text-[10px] text-emerald-300/60">
+                        {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {t.kakeiboCategory || t.type}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={`text-xs font-black ${isIncome ? 'text-lime-400' : 'text-white'}`}>
+                    {isIncome ? '+' : '-'}₹{t.amount.toLocaleString()}
+                  </div>
+                </div>
+
+                {/* Progressive Disclosure Expansion */}
+                {isExpanded && (
+                  <div className="pt-2 border-t border-emerald-500/15 flex items-center justify-between text-xs animate-in fade-in duration-150">
+                    <span className="text-[10px] text-emerald-300/70 font-semibold">
+                      {t.isRecurring ? '🔁 Recurring Payment' : 'One-time Payment'}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newDesc = prompt('Edit description:', t.description);
+                          if (newDesc) onUpdateTransaction({ ...t, description: newDesc });
+                        }}
+                        className="px-2 py-1 rounded bg-emerald-900 text-emerald-300 text-[10px] font-bold"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteTransaction(t.id);
+                        }}
+                        className="px-2 py-1 rounded bg-rose-950 text-rose-300 text-[10px] font-bold"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
     </div>
   );
 };

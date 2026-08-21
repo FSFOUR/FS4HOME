@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-import { AppState, ScheduleItem, Priority, RoutinePhase, RoutineSubsection, DailyChecklistItem, PrayerTimes } from '../types';
+import { AppState, ScheduleItem, RoutinePhase, RoutineSubsection, DailyChecklistItem } from '../types';
 
 interface Props {
   state: AppState;
@@ -17,20 +16,20 @@ interface Props {
   onUpdateReview: (key: keyof AppState['eveningReview'], val: string) => void;
 }
 
-const CATEGORY_COLORS = {
-  Routine: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700',
-  'Deep Work': 'bg-blue-500/10 border-blue-500/20 text-blue-700',
-  Family: 'bg-rose-500/10 border-rose-500/20 text-rose-700',
-  House: 'bg-amber-500/10 border-amber-500/20 text-amber-700',
-  Personal: 'bg-slate-500/10 border-slate-500/20 text-slate-700',
+const CATEGORY_COLORS: Record<string, string> = {
+  Routine: 'bg-emerald-950/80 border-emerald-500/30 text-emerald-300',
+  'Deep Work': 'bg-blue-950/80 border-blue-500/30 text-blue-300',
+  Family: 'bg-rose-950/80 border-rose-500/30 text-rose-300',
+  House: 'bg-amber-950/80 border-amber-500/30 text-amber-300',
+  Personal: 'bg-slate-900/80 border-slate-600/30 text-slate-300',
 };
 
-const PHASE_THEMES = {
-  Sleep: 'border-indigo-500/20 bg-indigo-50/30 text-indigo-900',
-  Morning: 'border-amber-500/20 bg-amber-50/30 text-amber-900',
-  Work: 'border-blue-500/20 bg-blue-50/30 text-blue-900',
-  Commute: 'border-slate-500/20 bg-slate-50/30 text-slate-900',
-  Evening: 'border-emerald-500/20 bg-emerald-50/30 text-emerald-900',
+const PHASE_THEMES: Record<string, string> = {
+  Sleep: 'border-indigo-500/30 bg-indigo-950/40 text-indigo-200',
+  Morning: 'border-amber-500/30 bg-amber-950/40 text-amber-200',
+  Work: 'border-blue-500/30 bg-blue-950/40 text-blue-200',
+  Commute: 'border-slate-500/30 bg-slate-900/40 text-slate-200',
+  Evening: 'border-emerald-500/30 bg-emerald-950/40 text-emerald-200',
 };
 
 const Schedule: React.FC<Props> = ({ 
@@ -47,6 +46,7 @@ const Schedule: React.FC<Props> = ({
   onToggleChecklist, 
   onUpdateReview 
 }) => {
+  const [activeTab, setActiveTab] = useState<'timeline' | 'blueprint' | 'checklist'>('timeline');
   const [formData, setFormData] = useState<Omit<ScheduleItem, 'id'>>({
     title: '',
     startTime: '08:00',
@@ -63,18 +63,11 @@ const Schedule: React.FC<Props> = ({
     return () => clearInterval(timer);
   }, []);
 
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title) return;
     onAddSchedule(formData);
     setFormData({ ...formData, title: '' });
-  };
-
-  const getPositionForTime = (timeStr: string) => {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return hours * 64 + (minutes / 60) * 64;
   };
 
   const checklistGroups = useMemo<Record<string, DailyChecklistItem[]>>(() => {
@@ -92,11 +85,12 @@ const Schedule: React.FC<Props> = ({
     if (!state.prayerTimes || !state.prayerTimes.fajr || !state.prayerTimes.dhuhr) return null;
     const nowStr = currentTime.getHours().toString().padStart(2, '0') + ":" + currentTime.getMinutes().toString().padStart(2, '0');
     const times = [
-      { name: 'Fajr', time: state.prayerTimes.fajr },
-      { name: 'Dhuhr', time: state.prayerTimes.dhuhr },
-      { name: 'Asr', time: state.prayerTimes.asr },
-      { name: 'Maghrib', time: state.prayerTimes.maghrib },
-      { name: 'Isha', time: state.prayerTimes.isha },
+      { name: 'Fajr', time: state.prayerTimes.fajr, icon: '🌘' },
+      { name: 'Sunrise', time: state.prayerTimes.sunrise, icon: '🌅' },
+      { name: 'Dhuhr', time: state.prayerTimes.dhuhr, icon: '☀️' },
+      { name: 'Asr', time: state.prayerTimes.asr, icon: '⛅' },
+      { name: 'Maghrib', time: state.prayerTimes.maghrib, icon: '🌇' },
+      { name: 'Isha', time: state.prayerTimes.isha, icon: '🌃' },
     ];
     
     let next = times.find(p => p.time > nowStr);
@@ -141,99 +135,152 @@ const Schedule: React.FC<Props> = ({
     setDraggedIndex(null);
   };
 
+  // Sort schedule items by start time
+  const sortedSchedule = useMemo(() => {
+    return [...state.schedule].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [state.schedule]);
+
   return (
-    <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-3.5 max-w-6xl mx-auto text-slate-100 animate-in fade-in duration-200 pb-16">
+      
+      {/* Header & Live Clock / Next Salah Mini-Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-emerald-500/20 pb-3">
         <div>
-          <h2 className="text-2xl md:text-4xl font-black text-slate-800 tracking-tight">Daily Schedule</h2>
-          <p className="text-xs md:text-sm text-slate-400 font-bold uppercase tracking-widest mt-1">Master Your Time • Rule Your Day</p>
+          <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">Schedule & Routine</h1>
+          <p className="text-xs text-emerald-300/70">Time-blocking, daily prayer synchronization, and routine blueprint</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
           {nextPrayer && (
-            <div className="bg-emerald-50 border border-emerald-100 px-4 py-2 rounded-2xl flex items-center gap-3">
-              <div className="bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Next Salah</p>
-                <p className="text-sm font-black text-slate-800">{nextPrayer.name} at {nextPrayer.time}</p>
-              </div>
+            <div className="px-2.5 py-1 rounded-lg bg-emerald-950/70 border border-emerald-500/30 flex items-center gap-1.5 text-xs">
+              <span className="text-lime-400">🕌</span>
+              <span className="text-[11px] text-emerald-300/80">Next:</span>
+              <span className="font-black text-white">{nextPrayer.name} {nextPrayer.time}</span>
             </div>
           )}
-          <div className="bg-white px-6 py-3 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-lg font-black text-slate-800">
-              {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+          <div className="px-2.5 py-1 rounded-lg bg-emerald-950/70 border border-emerald-500/30 flex items-center gap-1.5 text-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse" />
+            <span className="font-mono font-bold text-lime-300">
+              {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
             </span>
           </div>
         </div>
-      </header>
+      </div>
 
+      {/* Prayer Times Ribbon (Compact 6-column grid) */}
       {state.prayerTimes && (
-        <section className="bg-gradient-to-br from-emerald-900 to-emerald-950 text-white rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-[80px]" />
-          <div className="relative z-10">
-            <div className="flex justify-between items-center mb-8">
-               <div>
-                 <h3 className="text-xl font-black uppercase tracking-widest text-emerald-400">Prayer Times</h3>
-                 <p className="text-[10px] font-bold text-emerald-500/60 uppercase tracking-widest mt-1">Kerala, India (IST)</p>
-               </div>
-               <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-center">
-                 <p className="text-[9px] font-black uppercase text-emerald-400">Current Date</p>
-                 <p className="text-sm font-black">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</p>
-               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              {[
-                { name: 'Fajr', time: state.prayerTimes.fajr, icon: '🌘' },
-                { name: 'Sunrise', time: state.prayerTimes.sunrise, icon: '🌅' },
-                { name: 'Dhuhr', time: state.prayerTimes.dhuhr, icon: '☀️' },
-                { name: 'Asr', time: state.prayerTimes.asr, icon: '⛅' },
-                { name: 'Maghrib', time: state.prayerTimes.maghrib, icon: '🌇' },
-                { name: 'Isha', time: state.prayerTimes.isha, icon: '🌃' },
-              ].map(p => (
-                <div key={p.name} className={`bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center group hover:bg-white/10 transition-all cursor-pointer ${nextPrayer?.name === p.name ? 'ring-2 ring-emerald-500 bg-white/10 shadow-lg' : ''}`} onClick={() => handleSyncPrayer(p.name, p.time)}>
-                  <span className="text-xl mb-2">{p.icon}</span>
-                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{p.name}</p>
-                  <p className="text-lg font-black mt-1">{p.time}</p>
-                  <button className="mt-3 opacity-0 group-hover:opacity-100 text-[8px] font-black bg-emerald-500 text-white px-2 py-1 rounded transition-all">SYNC TO DAY</button>
-                </div>
-              ))}
-            </div>
+        <div className="glass-card p-2.5 rounded-xl border border-emerald-500/20">
+          <div className="flex items-center justify-between text-[11px] font-bold text-emerald-300/80 mb-1.5 px-1">
+            <span className="flex items-center gap-1"><span>🕌</span> Daily Prayer Times (IST)</span>
+            <span className="text-[10px] text-emerald-400/60 font-mono">Click to sync with timeline</span>
           </div>
-        </section>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+            {[
+              { name: 'Fajr', time: state.prayerTimes.fajr, icon: '🌘' },
+              { name: 'Sunrise', time: state.prayerTimes.sunrise, icon: '🌅' },
+              { name: 'Dhuhr', time: state.prayerTimes.dhuhr, icon: '☀️' },
+              { name: 'Asr', time: state.prayerTimes.asr, icon: '⛅' },
+              { name: 'Maghrib', time: state.prayerTimes.maghrib, icon: '🌇' },
+              { name: 'Isha', time: state.prayerTimes.isha, icon: '🌃' },
+            ].map(p => {
+              const isNext = nextPrayer?.name === p.name;
+              return (
+                <button
+                  key={p.name}
+                  onClick={() => handleSyncPrayer(p.name, p.time)}
+                  className={`p-1.5 rounded-lg border text-center transition-all flex flex-col items-center ${
+                    isNext 
+                      ? 'bg-lime-400/15 border-lime-400/50 text-white ring-1 ring-lime-400/40' 
+                      : 'bg-emerald-950/40 border-emerald-500/15 hover:border-lime-400/30 text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-300/80">
+                    <span>{p.icon}</span>
+                    <span>{p.name}</span>
+                  </div>
+                  <span className="text-xs font-black text-white font-mono mt-0.5">{p.time}</span>
+                  <span className="text-[8px] text-lime-400 font-bold opacity-70 mt-0.5">+ Sync</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="space-y-6">
-          <section className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-            <h3 className="font-black text-slate-800 uppercase tracking-tight mb-6">Block Time</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Sub-Navigation Tabs */}
+      <div className="flex gap-1.5 p-1 rounded-xl bg-emerald-950/60 border border-emerald-500/20 text-xs">
+        {[
+          { id: 'timeline', label: 'Timeline & Time-Blocking', icon: '⏱️' },
+          { id: 'blueprint', label: 'Routine Blueprint', icon: '📋' },
+          { id: 'checklist', label: 'Checklist & Review', icon: '✅' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex-1 py-1.5 px-2 rounded-lg font-black text-xs flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === tab.id
+                ? 'bg-lime-400 text-emerald-950 shadow-sm font-black'
+                : 'text-emerald-300/70 hover:text-white'
+            }`}
+          >
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* TAB 1: TIMELINE & QUICK BLOCK TIME */}
+      {activeTab === 'timeline' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          
+          {/* Quick Block Time Form (1 col) */}
+          <div className="glass-card p-3.5 rounded-2xl border border-emerald-500/20 space-y-3">
+            <div className="flex items-center justify-between border-b border-emerald-500/15 pb-2">
+              <h3 className="text-xs font-black text-white uppercase">Block Activity</h3>
+              <span className="text-[10px] text-lime-400 font-bold">Fast entry</span>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-2.5 text-xs">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Activity Name</label>
-                <input 
-                  type="text" 
-                  className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-emerald-500/5 outline-none font-bold text-sm"
-                  placeholder="e.g., Morning Run, Work Block"
+                <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">Activity Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Deep Work, Gym, Qur'an"
                   value={formData.title}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-2.5 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white font-bold outline-none focus:border-lime-400 text-xs"
+                  required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Start</label>
-                  <input type="time" className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 focus:bg-white outline-none font-bold text-sm" value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })} />
+                  <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">Start Time</label>
+                  <input
+                    type="time"
+                    value={formData.startTime}
+                    onChange={e => setFormData({ ...formData, startTime: e.target.value })}
+                    className="w-full px-2 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white font-bold outline-none focus:border-lime-400 text-xs"
+                  />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">End</label>
-                  <input type="time" className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 focus:bg-white outline-none font-bold text-sm" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} />
+                  <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">End Time</label>
+                  <input
+                    type="time"
+                    value={formData.endTime}
+                    onChange={e => setFormData({ ...formData, endTime: e.target.value })}
+                    className="w-full px-2 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white font-bold outline-none focus:border-lime-400 text-xs"
+                  />
                 </div>
               </div>
+
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Category</label>
-                <select className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-white outline-none font-bold text-sm cursor-pointer" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value as any })}>
+                <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">Category</label>
+                <select
+                  value={formData.category}
+                  onChange={e => setFormData({ ...formData, category: e.target.value as any })}
+                  className="w-full px-2.5 py-1.5 bg-[#061f12] border border-emerald-500/30 rounded-lg text-white font-bold outline-none focus:border-lime-400 text-xs"
+                >
                   <option>Routine</option>
                   <option>Deep Work</option>
                   <option>Family</option>
@@ -241,224 +288,268 @@ const Schedule: React.FC<Props> = ({
                   <option>Personal</option>
                 </select>
               </div>
-              <button type="submit" className="w-full bg-emerald-600 text-white font-black py-4 rounded-xl hover:bg-emerald-700 transition-all shadow-lg active:scale-95 uppercase tracking-widest text-xs">Add to Timeline</button>
-            </form>
-          </section>
-        </div>
 
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-[700px]">
-             <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                <h3 className="font-black text-slate-800 uppercase tracking-tight">Active Timeline</h3>
-             </div>
-             <div className="flex-1 overflow-y-auto no-scrollbar relative p-8">
-                <div className="absolute top-8 left-8 bottom-8 w-16 pointer-events-none">
-                  {hours.map(hour => (
-                    <div key={hour} className="h-16 flex items-start border-t border-slate-50 pt-2">
-                      <span className="text-[10px] font-black text-slate-300 uppercase">{hour === 0 ? '12 AM' : hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`}</span>
+              <button
+                type="submit"
+                className="w-full py-2 rounded-xl bg-lime-400 text-emerald-950 text-xs font-black hover:bg-lime-300 shadow-sm glow-lime-sm transition-all"
+              >
+                + Add to Timeline
+              </button>
+            </form>
+          </div>
+
+          {/* Active Schedule List (2 cols) */}
+          <div className="lg:col-span-2 glass-card p-3.5 rounded-2xl border border-emerald-500/20 space-y-2.5">
+            <div className="flex items-center justify-between border-b border-emerald-500/15 pb-2">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-black text-white uppercase">Today's Schedule</h3>
+                <span className="text-[10px] text-emerald-400/70">({sortedSchedule.length} blocks)</span>
+              </div>
+              <span className="text-[10px] text-emerald-300/60 font-mono">Sorted chronologically</span>
+            </div>
+
+            {sortedSchedule.length === 0 ? (
+              <div className="text-center py-10 text-emerald-300/60 text-xs">
+                No time blocks added for today. Use the form or click a prayer above to sync.
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-[460px] overflow-y-auto pr-1">
+                {sortedSchedule.map(item => {
+                  const catStyle = CATEGORY_COLORS[item.category] || CATEGORY_COLORS.Routine;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between transition-colors ${catStyle}`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="px-2 py-1 rounded-md bg-black/40 border border-white/10 font-mono text-[11px] font-black text-white shrink-0">
+                          {item.startTime} - {item.endTime}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
+                          <span className="text-[9px] uppercase font-bold opacity-70">{item.category}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => onDeleteSchedule(item.id)}
+                        className="text-xs text-rose-400/80 hover:text-rose-300 font-bold p-1 shrink-0"
+                        title="Delete block"
+                      >
+                        ✕
+                      </button>
                     </div>
-                  ))}
-                </div>
-                <div className="ml-20 relative h-[1536px]">
-                   {hours.map(hour => <div key={hour} className="absolute w-full h-px bg-slate-50" style={{ top: `${hour * 64}px` }} />)}
-                   <div className="absolute left-0 right-0 h-0.5 bg-rose-500 z-20 flex items-center" style={{ top: `${getPositionForTime(`${currentTime.getHours()}:${currentTime.getMinutes()}`)}px` }}>
-                     <div className="w-2 h-2 rounded-full bg-rose-500 -ml-1 shadow-lg" />
-                   </div>
-                   {state.schedule.map(item => {
-                     const top = getPositionForTime(item.startTime);
-                     const bottom = getPositionForTime(item.endTime);
-                     const height = Math.max(bottom - top, 40);
-                     return (
-                       <div key={item.id} className={`absolute left-4 right-4 p-4 rounded-2xl border-l-4 shadow-sm transition-all hover:scale-[1.01] flex justify-between items-start ${CATEGORY_COLORS[item.category]}`} style={{ top: `${top}px`, height: `${height}px` }}>
-                         <div><h4 className="font-black text-sm">{item.title}</h4><p className="text-[10px] opacity-70 font-bold">{item.startTime} — {item.endTime}</p></div>
-                         <button onClick={() => onDeleteSchedule(item.id)} className="p-1 hover:bg-black/5 rounded-lg transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                       </div>
-                     );
-                   })}
-                </div>
-             </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 pt-8 border-t border-slate-200">
-        
-        <div className="space-y-8">
-           <div className="flex justify-between items-end">
-             <div>
-               <h3 className="text-3xl font-black text-slate-800 tracking-tight">Ideal Routine Blueprint</h3>
-               <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mt-2">Adjust your rhythms • Click items to manage subsections</p>
-             </div>
-             <button 
-               onClick={onAddRoutinePhase}
-               className="bg-emerald-600 text-white p-3 rounded-2xl hover:bg-emerald-700 transition-all shadow-lg active:scale-95"
-               title="Add New Phase"
-             >
-               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
-             </button>
-           </div>
-           
-           <div className="space-y-4">
-              {state.routineBlueprint.map((phase, index) => {
-                const isExpanded = expandedPhases.has(phase.id);
-                return (
-                  <div key={phase.id} className="space-y-3">
-                    <div 
-                      draggable={true}
-                      onDragStart={() => handleDragStart(index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => togglePhaseExpansion(phase.id)}
-                      className={`group flex items-center gap-4 p-5 rounded-[1.75rem] border-2 transition-all hover:shadow-md cursor-pointer relative ${draggedIndex === index ? 'opacity-40 scale-95 border-emerald-400 border-dashed' : PHASE_THEMES[phase.category]}`}
-                    >
-                      <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-2xl shrink-0 transition-transform group-hover:scale-105">
-                        {phase.icon}
-                      </div>
-                      
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <input 
-                            className="bg-transparent font-black text-sm md:text-base tracking-tight outline-none focus:bg-white/20 rounded px-1 w-full"
-                            value={phase.title}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={e => onUpdateRoutine(phase.id, { title: e.target.value })}
-                          />
+      {/* TAB 2: ROUTINE BLUEPRINT */}
+      {activeTab === 'blueprint' && (
+        <div className="glass-card p-3.5 md:p-4 rounded-2xl border border-emerald-500/20 space-y-3">
+          <div className="flex items-center justify-between border-b border-emerald-500/15 pb-2">
+            <div>
+              <h3 className="text-xs md:text-sm font-black text-white">Ideal Routine Blueprint</h3>
+              <p className="text-[10px] text-emerald-300/70">Drag to reorder • Click items to expand and manage subsections</p>
+            </div>
+            <button
+              onClick={onAddRoutinePhase}
+              className="px-2.5 py-1 rounded-lg bg-lime-400 text-emerald-950 text-xs font-black hover:bg-lime-300 transition-colors"
+            >
+              + Add Phase
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {state.routineBlueprint.map((phase, index) => {
+              const isExpanded = expandedPhases.has(phase.id);
+              const theme = PHASE_THEMES[phase.category] || PHASE_THEMES.Evening;
+
+              return (
+                <div key={phase.id} className="space-y-1.5">
+                  <div
+                    draggable={true}
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragEnd={handleDragEnd}
+                    onClick={() => togglePhaseExpansion(phase.id)}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      draggedIndex === index ? 'opacity-40 border-lime-400 border-dashed' : theme
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <span className="text-base shrink-0">{phase.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <input
+                          className="bg-transparent font-bold text-xs text-white outline-none focus:bg-emerald-950/60 rounded px-1 w-full"
+                          value={phase.title}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={e => onUpdateRoutine(phase.id, { title: e.target.value })}
+                        />
+                        <div className="flex items-center gap-2 text-[10px] text-emerald-300/70">
+                          <span>{phase.category}</span>
                           {phase.subsections && phase.subsections.length > 0 && (
-                            <span className="bg-white/40 text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">
-                              {phase.subsections.length} Sub
+                            <span className="px-1.5 py-0.2 rounded bg-emerald-900/60 text-[9px] font-bold text-lime-400">
+                              {phase.subsections.length} sub-tasks
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] font-bold uppercase opacity-60">{phase.category}</p>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="bg-slate-200/40 px-4 py-2 rounded-2xl flex items-center gap-2 border border-black/5 shadow-inner">
-                          <span className="text-[11px] font-black tabular-nums">{phase.startTime}</span>
-                          <span className="text-slate-400 text-xs">→</span>
-                          <span className="text-[11px] font-black tabular-nums">{phase.endTime}</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); onAddRoutineSubsection(phase.id); if(!isExpanded) togglePhaseExpansion(phase.id); }} 
-                             className="p-2 bg-white rounded-xl shadow-sm hover:text-emerald-600 border border-slate-100"
-                             title="Add Subsection"
-                           >
-                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
-                           </button>
-                           <button onClick={(e) => { e.stopPropagation(); onDeleteRoutinePhase(phase.id); }} className="p-2 bg-white rounded-xl shadow-sm hover:text-rose-600 border border-slate-100">
-                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                           </button>
-                        </div>
                       </div>
                     </div>
 
-                    {/* Subsections List - Conditional Render based on expanded state */}
-                    {isExpanded && phase.subsections && (
-                      <div className="ml-16 space-y-2 animate-in slide-in-from-top-2 fade-in duration-300">
-                        {phase.subsections.map(sub => (
-                          <div key={sub.id} className="flex items-center gap-4 p-4 bg-white/60 border border-slate-200/50 rounded-2xl group/sub shadow-sm transition-all hover:bg-white">
-                            <div className="w-9 h-9 rounded-xl bg-white shadow-xs flex items-center justify-center text-lg shrink-0">
-                               {sub.icon}
-                            </div>
-                            <div className="flex-1 flex items-center justify-between">
-                               <div>
-                                 <input 
-                                   className="bg-transparent font-bold text-sm outline-none focus:bg-slate-100 rounded px-1 w-full"
-                                   value={sub.title}
-                                   onChange={e => onUpdateRoutineSubsection(phase.id, sub.id, { title: e.target.value })}
-                                 />
-                                 <p className="text-[9px] font-black text-slate-400 uppercase">{phase.category}</p>
-                               </div>
-                               <div className="flex items-center gap-3">
-                                  <div className="bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/50 text-[10px] font-black tabular-nums flex items-center gap-1.5 shadow-xs">
-                                    {sub.startTime} <span className="opacity-30">→</span> {sub.endTime}
-                                  </div>
-                                  <button onClick={() => onDeleteRoutineSubsection(phase.id, sub.id)} className="opacity-0 group-hover/sub:opacity-100 p-1.5 hover:text-rose-500 transition-all">
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-                                  </button>
-                               </div>
-                            </div>
-                          </div>
-                        ))}
-                        {phase.subsections.length === 0 && (
-                          <div className="text-center py-4 border border-dashed border-slate-200 rounded-2xl">
-                             <p className="text-[10px] font-black text-slate-400 uppercase">No subsections yet.</p>
-                             <button 
-                               onClick={() => onAddRoutineSubsection(phase.id)}
-                               className="mt-1 text-emerald-600 font-black text-[10px] uppercase hover:underline"
-                             >
-                               + Add First Subsection
-                             </button>
-                          </div>
-                        )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="px-2 py-0.5 rounded bg-black/40 border border-white/10 text-[10px] font-mono font-black text-white">
+                        {phase.startTime} → {phase.endTime}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-              <button 
-                onClick={onAddRoutinePhase}
-                className="w-full border-2 border-dashed border-slate-200 py-8 rounded-[2rem] text-slate-400 font-black uppercase text-xs hover:border-emerald-300 hover:text-emerald-500 transition-all flex items-center justify-center gap-2 group"
-              >
-                <svg className="w-4 h-4 group-hover:scale-125 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
-                Append New Phase
-              </button>
-           </div>
-        </div>
 
-        <div className="space-y-10">
-          <div>
-            <h3 className="text-3xl font-black text-slate-800 tracking-tight">Daily To-Do Checklist</h3>
-            <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mt-2">Balanced living requires deliberate action</p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddRoutineSubsection(phase.id);
+                          if (!isExpanded) togglePhaseExpansion(phase.id);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-emerald-900/60 hover:bg-emerald-800 text-lime-400 text-[10px] font-bold"
+                        title="Add Subsection"
+                      >
+                        + Sub
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteRoutinePhase(phase.id);
+                        }}
+                        className="text-rose-400 hover:text-rose-300 text-xs p-0.5 font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Subsections */}
+                  {isExpanded && phase.subsections && (
+                    <div className="ml-6 space-y-1.5 border-l-2 border-emerald-500/20 pl-3">
+                      {phase.subsections.map(sub => (
+                        <div
+                          key={sub.id}
+                          className="flex items-center justify-between p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/10 text-xs"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span>{sub.icon}</span>
+                            <input
+                              className="bg-transparent font-medium text-xs text-white outline-none focus:bg-emerald-900/50 rounded px-1 flex-1"
+                              value={sub.title}
+                              onChange={e => onUpdateRoutineSubsection(phase.id, sub.id, { title: e.target.value })}
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-emerald-300/80">
+                              {sub.startTime} - {sub.endTime}
+                            </span>
+                            <button
+                              onClick={() => onDeleteRoutineSubsection(phase.id, sub.id)}
+                              className="text-[10px] text-rose-400 hover:text-rose-300 font-bold"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
+        </div>
+      )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             {(Object.entries(checklistGroups) as [string, DailyChecklistItem[]][]).map(([cat, items]) => (
-               <div key={cat} className="bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
-                  <div className="flex items-center gap-3 border-b border-slate-200/50 pb-4">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-900/10">
-                       <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <h4 className="font-black text-slate-800 uppercase tracking-widest text-xs">{cat} Priorities</h4>
-                  </div>
-                  <div className="space-y-4 flex-1">
+      {/* TAB 3: CHECKLIST & EVENING REVIEW */}
+      {activeTab === 'checklist' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Priorities Checklist */}
+          <div className="glass-card p-3.5 rounded-2xl border border-emerald-500/20 space-y-2.5">
+            <div className="flex items-center justify-between border-b border-emerald-500/15 pb-2">
+              <h3 className="text-xs font-black text-white uppercase">Daily Priorities Checklist</h3>
+              <span className="text-[10px] text-lime-400 font-bold">Focus & Habit</span>
+            </div>
+
+            <div className="space-y-3">
+              {(Object.entries(checklistGroups) as [string, DailyChecklistItem[]][]).map(([cat, items]) => (
+                <div key={cat} className="space-y-1.5">
+                  <span className="text-[10px] font-black uppercase text-emerald-400/80 tracking-wider block">
+                    {cat}
+                  </span>
+                  <div className="space-y-1">
                     {items.map(item => (
-                      <div key={item.id} className="flex items-start gap-3 group cursor-pointer" onClick={() => onToggleChecklist(item.id)}>
-                        <div className={`mt-1 w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${item.completed ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-200 group-hover:border-emerald-300'}`}>
-                          {item.completed && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
-                        </div>
-                        <p className={`text-sm font-bold leading-tight transition-all ${item.completed ? 'text-slate-300 line-through decoration-emerald-500/50' : 'text-slate-700'}`}>{item.label}</p>
+                      <div
+                        key={item.id}
+                        onClick={() => onToggleChecklist(item.id)}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/10 hover:border-lime-400/30 cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={item.completed}
+                          onChange={() => {}}
+                          className="accent-lime-400 w-3.5 h-3.5 cursor-pointer"
+                        />
+                        <span className={`text-xs font-medium flex-1 ${item.completed ? 'line-through text-emerald-300/40' : 'text-white'}`}>
+                          {item.label}
+                        </span>
                       </div>
                     ))}
                   </div>
-               </div>
-             ))}
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="bg-[#0F172A] text-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-8 opacity-10"><svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.1 16.01L7 13.11l1.41-1.41 4.7 4.71 7.3-7.31L21.82 10.5l-8.72 8.51z"/></svg></div>
-             <div className="relative z-10 space-y-8">
-                <h4 className="text-xl font-black uppercase tracking-widest border-b border-white/10 pb-4">Evening Reflection</h4>
-                <div className="grid grid-cols-1 gap-6">
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">What went well today?</label>
-                      <textarea className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-medium outline-none focus:bg-white/10 transition-all resize-none h-20" placeholder="Capture your wins..." value={state.eveningReview.well} onChange={e => onUpdateReview('well', e.target.value)} />
-                   </div>
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">What to improve tomorrow?</label>
-                      <textarea className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-medium outline-none focus:bg-white/10 transition-all resize-none h-20" placeholder="Continuous improvement mindset..." value={state.eveningReview.improve} onChange={e => onUpdateReview('improve', e.target.value)} />
-                   </div>
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Gratitude Note</label>
-                      <textarea className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-sm font-medium outline-none focus:bg-emerald-500/20 transition-all resize-none h-20 placeholder-emerald-800" placeholder="Focus on the Barakah..." value={state.eveningReview.gratitude} onChange={e => onUpdateReview('gratitude', e.target.value)} />
-                   </div>
-                </div>
-             </div>
+          {/* Evening Reflection */}
+          <div className="glass-card p-3.5 rounded-2xl border border-emerald-500/20 space-y-2.5">
+            <div className="flex items-center justify-between border-b border-emerald-500/15 pb-2">
+              <h3 className="text-xs font-black text-white uppercase">Evening Reflection</h3>
+              <span className="text-[10px] text-lime-400 font-bold">Muhasabah & Barakah</span>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              <div>
+                <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">What went well today?</label>
+                <textarea
+                  className="w-full bg-[#061f12] border border-emerald-500/30 rounded-lg p-2 text-xs font-medium text-white outline-none focus:border-lime-400 resize-none h-16"
+                  placeholder="Wins, progress, completed tasks..."
+                  value={state.eveningReview.well}
+                  onChange={e => onUpdateReview('well', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">What to improve tomorrow?</label>
+                <textarea
+                  className="w-full bg-[#061f12] border border-emerald-500/30 rounded-lg p-2 text-xs font-medium text-white outline-none focus:border-lime-400 resize-none h-16"
+                  placeholder="Continuous incremental improvements..."
+                  value={state.eveningReview.improve}
+                  onChange={e => onUpdateReview('improve', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-emerald-300/70 uppercase mb-1">Gratitude & Barakah Note</label>
+                <textarea
+                  className="w-full bg-[#061f12] border border-emerald-500/30 rounded-lg p-2 text-xs font-medium text-white outline-none focus:border-lime-400 resize-none h-16"
+                  placeholder="Alhamdulillah for..."
+                  value={state.eveningReview.gratitude}
+                  onChange={e => onUpdateReview('gratitude', e.target.value)}
+                />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 };

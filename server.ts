@@ -123,6 +123,41 @@ async function startServer() {
     }
   });
 
+  app.post("/api/gemini/pareto-insight", async (req, res) => {
+    if (!ai) return res.status(500).json({ error: "Gemini API key not configured" });
+    try {
+      const { paretoData, userStrategy } = req.body;
+      const prompt = `
+        You are a top-tier personal CFO analyzing the user's finances using the 80/20 Pareto principle (focus on the few drivers causing 80% of impact).
+        
+        Financial Summary:
+        - Total Income: ₹${paretoData.totalIncome}
+        - Total Spending: ₹${paretoData.totalExpenses}
+        - Net Savings: ₹${paretoData.netSavings} (Savings Rate: ${paretoData.savingsRate}%)
+        - Top 80/20 Drivers: ${JSON.stringify(paretoData.categories.slice(0, 4).map((c: any) => ({ category: c.category, amount: c.amount, share: c.sharePercent + '%' })))}
+        - Detected Recurring Leaks: ${JSON.stringify(paretoData.recurringLeaks.slice(0, 3).map((r: any) => ({ name: r.name, monthly: r.monthlyAmount })))}
+        - User Goal/Strategy: ${userStrategy || 'SAVE_MORE'}
+        
+        Provide a concise, direct, high-impact 80/20 executive briefing in simple, clear language (no complex jargon).
+        Answer these 4 key points in clean Markdown:
+        1. **What Happened**: (1 sentence highlighting the concentration)
+        2. **Why It Matters**: (1 sentence showing the long-term leverage)
+        3. **What To Do**: (2 direct, high-impact actionable steps)
+        4. **Potential Impact**: (Estimated monthly & annual cash flow unlocked, e.g. "Unlocking ~₹3,500/month (₹42,000/year)")
+        
+        Keep the total answer under 120 words. Be motivating, precise, and practical.
+      `;
+      const response = await callGeminiWithRetry(() => ai.models.generateContent({
+        model: 'gemini-3.5-flash-lite',
+        contents: prompt,
+      }));
+      res.json({ text: response.text });
+    } catch (error: any) {
+      console.error("Pareto Insight Error:", error);
+      res.status(500).json({ error: error.message || "Failed to get Pareto insight" });
+    }
+  });
+
   // Vite middleware
   if (process.env.NODE_ENV !== "production") {
     const vite = await createServer({
