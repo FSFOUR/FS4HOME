@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AppState, WealthType, KakeiboCategory, Transaction } from '../types';
-import { getFinancialAdvice, getKakeiboInsight } from '../services/geminiService';
+import { getDashboardIntel } from '../services/geminiService';
 import QuickAddModal from './QuickAddModal';
 import MonthlySpendingChart from './MonthlySpendingChart';
 
@@ -59,17 +59,17 @@ const Dashboard: React.FC<{
   }, [state]);
 
   useEffect(() => {
-    const fetchAdvice = async () => {
-      const res = await getFinancialAdvice(state);
-      setAdvice(res || "Be moderate in spending and consistent in charity. 'The best wealth is the contentment of the soul.'");
+    let isMounted = true;
+    const fetchIntel = async () => {
+      const intel = await getDashboardIntel(state);
+      if (isMounted) {
+        setAdvice(intel.advice);
+        setKakeiboInsight(intel.kakeiboInsight);
+      }
     };
-    const fetchInsight = async () => {
-      const res = await getKakeiboInsight(state);
-      setKakeiboInsight(res || "Prioritize essential Needs and defer high-leak discretionary wants.");
-    };
-    fetchAdvice();
-    fetchInsight();
-  }, [state]);
+    fetchIntel();
+    return () => { isMounted = false; };
+  }, [state.transactions.length, state.monthlySavingsTarget, state.zakatGiven]);
 
   // Savings Goal calculation
   const savingsTarget = state.monthlySavingsTarget || 5000;
@@ -350,13 +350,23 @@ const Dashboard: React.FC<{
           </div>
         </div>
 
-        {/* Monthly Spending Chart */}
-        <div className="glass-card p-3.5 md:p-4 rounded-2xl border border-emerald-500/20">
+        {/* Monthly Spending Trends & Targets Chart */}
+        <div className="glass-card p-3.5 md:p-4 rounded-2xl border border-emerald-500/20 flex flex-col justify-between">
           <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2 mb-2">
-            <h3 className="text-xs md:text-sm font-black text-white">Monthly Allocation Chart</h3>
-            <span className="text-[10px] text-emerald-400/70 font-mono">Current Month</span>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs md:text-sm font-black text-white">Spending Trends vs Targets</h3>
+              <span className="text-[10px] text-lime-400 font-mono">Recharts</span>
+            </div>
+            <Link to="/budget" className="text-[10px] text-emerald-400/70 hover:text-lime-300 font-bold">
+              Budget Rules →
+            </Link>
           </div>
-          <MonthlySpendingChart spending={stats.kakeiboBreakdown} targets={state.monthlyTargets['current'] || {}} />
+          <MonthlySpendingChart 
+            spending={stats.kakeiboBreakdown} 
+            targets={state.monthlyTargets['current'] || {}} 
+            transactions={state.transactions}
+            monthlySavingsTarget={state.monthlySavingsTarget}
+          />
         </div>
       </div>
 

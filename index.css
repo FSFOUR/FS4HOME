@@ -26,21 +26,68 @@
 
 /* Display Density CSS System */
 html.density-comfortable {
-  --density-card-padding: 16px;
-  --density-row-gap: 12px;
-  --density-item-py: 10px;
+  --density-card-padding: 1.25rem;
+  --density-row-gap: 0.75rem;
+  --density-item-py: 0.625rem;
+}
+
+html.density-comfortable .glass-card {
+  padding: 1.25rem;
+}
+
+html.density-comfortable .space-y-3\.5 > :not([hidden]) ~ :not([hidden]),
+html.density-comfortable .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.25rem;
 }
 
 html.density-compact {
-  --density-card-padding: 12px;
-  --density-row-gap: 8px;
-  --density-item-py: 6px;
+  --density-card-padding: 0.875rem;
+  --density-row-gap: 0.5rem;
+  --density-item-py: 0.375rem;
+}
+
+html.density-compact .glass-card {
+  padding: 0.875rem;
 }
 
 html.density-extra-compact {
-  --density-card-padding: 8px;
-  --density-row-gap: 4px;
-  --density-item-py: 4px;
+  --density-card-padding: 0.5rem;
+  --density-row-gap: 0.25rem;
+  --density-item-py: 0.25rem;
+}
+
+html.density-extra-compact .glass-card {
+  padding: 0.5rem 0.625rem !important;
+  border-radius: 0.75rem !important;
+}
+
+html.density-extra-compact .space-y-4 > :not([hidden]) ~ :not([hidden]),
+html.density-extra-compact .space-y-3\.5 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.5rem !important;
+}
+
+html.density-extra-compact .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.375rem !important;
+}
+
+html.density-extra-compact .space-y-2 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.25rem !important;
+}
+
+html.density-extra-compact .gap-3 {
+  gap: 0.5rem !important;
+}
+
+html.density-extra-compact .gap-2\.5 {
+  gap: 0.375rem !important;
+}
+
+html.density-extra-compact input,
+html.density-extra-compact select,
+html.density-extra-compact textarea {
+  padding-top: 0.375rem !important;
+  padding-bottom: 0.375rem !important;
+  font-size: 0.75rem !important;
 }
 
 /* Custom scrollbars */

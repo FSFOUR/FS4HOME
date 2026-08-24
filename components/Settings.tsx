@@ -114,44 +114,96 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
       {/* Tab 1: Appearance & Display Density */}
       {activeTab === 'appearance' && (
         <div className="glass-card p-4 md:p-5 rounded-2xl space-y-4 border border-emerald-500/20">
-          <div>
-            <h3 className="text-sm font-black text-white">Display Density</h3>
-            <p className="text-xs text-emerald-300/70">Control padding, row height, and spacing across the entire app</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <div>
+              <h3 className="text-sm font-black text-white">Display Density</h3>
+              <p className="text-xs text-emerald-300/70">Updates global spacing, card paddings, and data row heights</p>
+            </div>
+            <span className="self-start sm:self-auto text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/30 text-lime-400">
+              html.density-{density}
+            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
             {[
-              { id: 'comfortable', label: 'Comfortable', desc: 'Spacious padding (16px+), larger touch buffers' },
-              { id: 'compact', label: 'Compact (Recommended)', desc: 'Balanced density (12px), rapid scannability' },
-              { id: 'extra-compact', label: 'Extra Compact', desc: 'Dense data rows (8px), maximum screen usage' },
+              { 
+                id: 'comfortable', 
+                label: 'Comfortable', 
+                badge: '16px+ Spacing',
+                desc: 'Generous padding and relaxed breathing room for touch screens',
+                bars: ['h-2.5', 'h-2.5', 'h-2.5'],
+                gap: 'gap-2'
+              },
+              { 
+                id: 'compact', 
+                label: 'Compact', 
+                badge: 'Recommended',
+                desc: 'Standard balanced spacing (12px) optimized for high scannability',
+                bars: ['h-2', 'h-2', 'h-2'],
+                gap: 'gap-1.5'
+              },
+              { 
+                id: 'extra-compact', 
+                label: 'Extra Compact', 
+                badge: 'Max Density',
+                desc: 'Tightly packed data rows (8px) for maximum information on screen',
+                bars: ['h-1.5', 'h-1.5', 'h-1.5'],
+                gap: 'gap-1'
+              },
             ].map(mode => (
-              <div
+              <button
+                type="button"
                 key={mode.id}
                 onClick={() => handleDensityChange(mode.id as DisplayDensity)}
-                className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between ${
                   density === mode.id
                     ? 'border-lime-400 bg-lime-400/15 glow-lime-sm'
                     : 'border-emerald-500/20 bg-emerald-950/40 hover:border-emerald-400/40'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-black text-white">{mode.label}</span>
-                  <input
-                    type="radio"
-                    name="density"
-                    checked={density === mode.id}
-                    onChange={() => {}}
-                    className="accent-lime-400 w-3.5 h-3.5"
-                  />
+                <div className="space-y-1.5 w-full">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-white">{mode.label}</span>
+                      {mode.id === 'compact' && (
+                        <span className="text-[9px] bg-lime-400/20 text-lime-300 font-bold px-1.5 py-0.2 rounded">Default</span>
+                      )}
+                    </div>
+                    <input
+                      type="radio"
+                      name="density"
+                      checked={density === mode.id}
+                      onChange={() => handleDensityChange(mode.id as DisplayDensity)}
+                      className="accent-lime-400 w-3.5 h-3.5"
+                    />
+                  </div>
+
+                  {/* Visual Preview Bars */}
+                  <div className={`w-full p-2 rounded-lg bg-emerald-950/80 border border-emerald-500/15 flex flex-col ${mode.gap}`}>
+                    {mode.bars.map((bClass, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`w-full ${bClass} rounded ${density === mode.id ? 'bg-lime-400/50' : 'bg-emerald-500/30'}`}
+                      />
+                    ))}
+                  </div>
+
+                  <p className="text-[10px] text-emerald-300/70 leading-relaxed pt-0.5">{mode.desc}</p>
                 </div>
-                <p className="text-[10px] text-emerald-300/70 leading-relaxed">{mode.desc}</p>
-              </div>
+
+                <div className="mt-2 pt-2 border-t border-emerald-500/10 flex items-center justify-between text-[10px] font-bold">
+                  <span className="text-emerald-400/60 font-mono">.{`density-${mode.id}`}</span>
+                  <span className={density === mode.id ? 'text-lime-400' : 'text-emerald-400/50'}>
+                    {density === mode.id ? '● Active' : 'Select'}
+                  </span>
+                </div>
+              </button>
             ))}
           </div>
 
           <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/15 text-xs text-emerald-300/80 flex items-center justify-between">
-            <span>Theme: <strong>Emerald Sharia & Lime Accent</strong></span>
-            <span className="text-[10px] bg-lime-400/20 text-lime-300 px-2 py-0.5 rounded font-bold">Active</span>
+            <span>Active CSS Mode: <strong className="text-lime-400 font-mono">&lt;html class="density-{density}"&gt;</strong></span>
+            <span className="text-[10px] bg-lime-400/20 text-lime-300 px-2 py-0.5 rounded font-bold">Applied Globally</span>
           </div>
         </div>
       )}

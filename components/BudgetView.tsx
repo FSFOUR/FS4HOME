@@ -129,10 +129,15 @@ export const BudgetView: React.FC<BudgetViewProps> = ({ state, onUpdateTarget })
         })}
       </div>
 
-      {/* Spending Breakdown Chart */}
+      {/* Spending Breakdown & Trends Chart */}
       <div className="glass-card p-4 rounded-2xl border border-emerald-500/20">
-        <h3 className="text-xs font-black text-lime-400 uppercase tracking-widest mb-2">Category Comparison Chart</h3>
-        <MonthlySpendingChart spending={stats.kakeibo} targets={state.monthlyTargets['current'] || {}} />
+        <h3 className="text-xs font-black text-lime-400 uppercase tracking-widest mb-3">Spending Trends vs Kakeibo Targets</h3>
+        <MonthlySpendingChart 
+          spending={stats.kakeibo} 
+          targets={state.monthlyTargets['current'] || {}} 
+          transactions={state.transactions}
+          monthlySavingsTarget={state.monthlySavingsTarget}
+        />
       </div>
     </div>
   );

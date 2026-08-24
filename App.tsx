@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   AppState, 
   Transaction, 
@@ -161,6 +162,12 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+  // Synchronize HTML root class for density modes ('density-comfortable', 'density-compact', 'density-extra-compact')
+  useEffect(() => {
+    const currentDensity = state.displayDensity || (localStorage.getItem('fs4home_density') as any) || 'compact';
+    document.documentElement.className = `density-${currentDensity}`;
+  }, [state.displayDensity]);
 
   const addMinutes = (time: string | undefined, minutes: number): string => {
     if (!time || !time.includes(':')) return '00:00';
@@ -450,80 +457,153 @@ const App: React.FC = () => {
         toastMessage={toastMessage}
         onCloseToast={() => setToastMessage(null)}
       >
-        <Routes>
-          <Route path="/" element={<Dashboard state={state} onUpdateUser={updateUserName} onAddTransaction={addTransaction} />} />
+        <AnimatedRoutes
+          state={state}
+          updateUserName={updateUserName}
+          addTransaction={addTransaction}
+          setState={setState}
+          addFinancialGoal={addFinancialGoal}
+          updateUserStrategy={updateUserStrategy}
+          showToast={showToast}
+          addScheduleItem={addScheduleItem}
+          deleteScheduleItem={deleteScheduleItem}
+          updateRoutinePhase={updateRoutinePhase}
+          addRoutinePhase={addRoutinePhase}
+          deleteRoutinePhase={deleteRoutinePhase}
+          addRoutineSubsection={addRoutineSubsection}
+          deleteRoutineSubsection={deleteRoutineSubsection}
+          updateRoutineSubsection={updateRoutineSubsection}
+          reorderRoutine={reorderRoutine}
+          toggleChecklistItem={toggleChecklistItem}
+          updateEveningReview={updateEveningReview}
+          updateTransaction={updateTransaction}
+          deleteTransaction={deleteTransaction}
+          updateMonthlyCategoryTarget={updateMonthlyCategoryTarget}
+          updateReflection={updateReflection}
+          addTask={addTask}
+          updateFoodPlan={updateFoodPlan}
+          addVehicleRecord={addVehicleRecord}
+        />
+      </Layout>
+    </Router>
+  );
+};
+
+interface AnimatedRoutesProps {
+  state: AppState;
+  updateUserName: (name: string) => void;
+  addTransaction: (tx: any) => void;
+  setState: React.Dispatch<React.SetStateAction<AppState>>;
+  addFinancialGoal: (goal: any) => void;
+  updateUserStrategy: (strategy: any) => void;
+  showToast: (msg: string) => void;
+  addScheduleItem: (item: any) => void;
+  deleteScheduleItem: (id: string) => void;
+  updateRoutinePhase: (id: string, updates: Partial<RoutinePhase>) => void;
+  addRoutinePhase: () => void;
+  deleteRoutinePhase: (id: string) => void;
+  addRoutineSubsection: (phaseId: string) => void;
+  deleteRoutineSubsection: (phaseId: string, subId: string) => void;
+  updateRoutineSubsection: (phaseId: string, subId: string, title: string) => void;
+  reorderRoutine: (fromIndex: number, toIndex: number) => void;
+  toggleChecklistItem: (id: string) => void;
+  updateEveningReview: (key: keyof AppState['eveningReview'], val: string) => void;
+  updateTransaction: (tx: any) => void;
+  deleteTransaction: (id: string) => void;
+  updateMonthlyCategoryTarget: (category: any, amount: number) => void;
+  updateReflection: (monthKey: string, reflection: any) => void;
+  addTask: (task: any) => void;
+  updateFoodPlan: (plan: any) => void;
+  addVehicleRecord: (record: any) => void;
+}
+
+const AnimatedRoutes: React.FC<AnimatedRoutesProps> = (props) => {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={location.pathname}
+        initial={{ opacity: 0, y: 10, scale: 0.995 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -8, scale: 0.995 }}
+        transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1.0] }}
+        className="w-full"
+      >
+        <Routes location={location}>
+          <Route path="/" element={<Dashboard state={props.state} onUpdateUser={props.updateUserName} onAddTransaction={props.addTransaction} />} />
           <Route path="/pareto" element={
             <ParetoDashboard 
-              state={state} 
-              onUpdateState={setState} 
-              onAddTransaction={addTransaction}
-              onAddGoal={addFinancialGoal}
-              onUpdateStrategy={updateUserStrategy}
+              state={props.state} 
+              onUpdateState={props.setState} 
+              onAddTransaction={props.addTransaction}
+              onAddGoal={props.addFinancialGoal}
+              onUpdateStrategy={props.updateUserStrategy}
             />
           } />
           <Route path="/insights" element={
             <ParetoDashboard 
-              state={state} 
-              onUpdateState={setState} 
-              onAddTransaction={addTransaction}
-              onAddGoal={addFinancialGoal}
-              onUpdateStrategy={updateUserStrategy}
+              state={props.state} 
+              onUpdateState={props.setState} 
+              onAddTransaction={props.addTransaction}
+              onAddGoal={props.addFinancialGoal}
+              onUpdateStrategy={props.updateUserStrategy}
             />
           } />
           <Route path="/budget" element={
             <BudgetView 
-              state={state} 
-              onUpdateTarget={(val) => setState(prev => ({ ...prev, monthlySavingsTarget: val }))}
+              state={props.state} 
+              onUpdateTarget={(val) => props.setState(prev => ({ ...prev, monthlySavingsTarget: val }))}
             />
           } />
           <Route path="/goals" element={
             <GoalsView 
-              state={state} 
-              onAddGoal={addFinancialGoal}
-              onUpdateState={setState}
-              onShowToast={showToast}
+              state={props.state} 
+              onAddGoal={props.addFinancialGoal}
+              onUpdateState={props.setState}
+              onShowToast={props.showToast}
             />
           } />
           <Route path="/tools/calculator" element={<CalculatorModal isPage={true} />} />
           <Route path="/settings" element={
             <Settings 
-              state={state} 
-              onUpdateState={setState} 
-              onShowToast={showToast}
+              state={props.state} 
+              onUpdateState={props.setState} 
+              onShowToast={props.showToast}
             />
           } />
           <Route path="/schedule" element={
             <Schedule 
-              state={state} 
-              onAddSchedule={addScheduleItem} 
-              onDeleteSchedule={deleteScheduleItem} 
-              onUpdateRoutine={updateRoutinePhase}
-              onAddRoutinePhase={addRoutinePhase}
-              onDeleteRoutinePhase={deleteRoutinePhase}
-              onAddRoutineSubsection={addRoutineSubsection}
-              onDeleteRoutineSubsection={deleteRoutineSubsection}
-              onUpdateRoutineSubsection={updateRoutineSubsection}
-              onReorderRoutine={reorderRoutine}
-              onToggleChecklist={toggleChecklistItem}
-              onUpdateReview={updateEveningReview}
+              state={props.state} 
+              onAddSchedule={props.addScheduleItem} 
+              onDeleteSchedule={props.deleteScheduleItem} 
+              onUpdateRoutine={props.updateRoutinePhase}
+              onAddRoutinePhase={props.addRoutinePhase}
+              onDeleteRoutinePhase={props.deleteRoutinePhase}
+              onAddRoutineSubsection={props.addRoutineSubsection}
+              onDeleteRoutineSubsection={props.deleteRoutineSubsection}
+              onUpdateRoutineSubsection={props.updateRoutineSubsection}
+              onReorderRoutine={props.reorderRoutine}
+              onToggleChecklist={props.toggleChecklistItem}
+              onUpdateReview={props.updateEveningReview}
             />
           } />
           <Route path="/finance" element={
             <Transactions 
-              state={state} 
-              onAddTransaction={addTransaction} 
-              onUpdateTransaction={updateTransaction}
-              onDeleteTransaction={deleteTransaction}
-              onUpdateTarget={(val) => setState(prev => ({...prev, monthlySavingsTarget: val}))} 
-              onUpdateMonthlyCategoryTarget={updateMonthlyCategoryTarget}
-              onUpdateReflection={updateReflection}
+              state={props.state} 
+              onAddTransaction={props.addTransaction} 
+              onUpdateTransaction={props.updateTransaction}
+              onDeleteTransaction={props.deleteTransaction}
+              onUpdateTarget={(val) => props.setState(prev => ({...prev, monthlySavingsTarget: val}))} 
+              onUpdateMonthlyCategoryTarget={props.updateMonthlyCategoryTarget}
+              onUpdateReflection={props.updateReflection}
             />
           } />
-          <Route path="/lifestyle" element={<Lifestyle state={state} onAddTask={addTask} onUpdateFood={updateFoodPlan} onAddVehicle={addVehicleRecord} />} />
-          <Route path="/zakat" element={<Zakat state={state} onUpdateGiven={(val) => setState(prev => ({...prev, zakatGiven: val}))} />} />
+          <Route path="/lifestyle" element={<Lifestyle state={props.state} onAddTask={props.addTask} onUpdateFood={props.updateFoodPlan} onAddVehicle={props.addVehicleRecord} />} />
+          <Route path="/zakat" element={<Zakat state={props.state} onUpdateGiven={(val) => props.setState(prev => ({...prev, zakatGiven: val}))} />} />
         </Routes>
-      </Layout>
-    </Router>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
