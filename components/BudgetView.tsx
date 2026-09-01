@@ -20,7 +20,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({ state, onUpdateTarget })
 
     const income = currentMonthTransactions
       .filter(t => t.type === WealthType.INCOME)
-      .reduce((acc, t) => acc + t.amount, 0) || 75000;
+      .reduce((acc, t) => acc + t.amount, 0);
 
     const expenses = currentMonthTransactions
       .filter(t => t.type === WealthType.EXPENSE)
@@ -42,12 +42,14 @@ export const BudgetView: React.FC<BudgetViewProps> = ({ state, onUpdateTarget })
     return { income, expenses, kakeibo };
   }, [state]);
 
+  const effectiveIncome = stats.income > 0 ? stats.income : 0;
+
   const budgetRules = [
     {
       category: KakeiboCategory.NEEDS,
       label: 'Essential Needs (50%)',
       icon: '🏠',
-      budget: Math.round(stats.income * 0.5),
+      budget: Math.round(effectiveIncome * 0.5),
       spent: stats.kakeibo[KakeiboCategory.NEEDS] || 0,
       desc: 'Housing, groceries, utilities, commute'
     },
@@ -55,7 +57,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({ state, onUpdateTarget })
       category: KakeiboCategory.WANTS,
       label: 'Lifestyle Wants (30%)',
       icon: '🛍️',
-      budget: Math.round(stats.income * 0.3),
+      budget: Math.round(effectiveIncome * 0.3),
       spent: stats.kakeibo[KakeiboCategory.WANTS] || 0,
       desc: 'Dining out, entertainment, hobbies'
     },
@@ -63,7 +65,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({ state, onUpdateTarget })
       category: KakeiboCategory.CULTURE,
       label: 'Culture & Growth (10%)',
       icon: '📚',
-      budget: Math.round(stats.income * 0.1),
+      budget: Math.round(effectiveIncome * 0.1),
       spent: stats.kakeibo[KakeiboCategory.CULTURE] || 0,
       desc: 'Books, learning, workshops, donations'
     },
@@ -71,7 +73,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({ state, onUpdateTarget })
       category: KakeiboCategory.UNEXPECTED,
       label: 'Unexpected & Emergency (10%)',
       icon: '⚡',
-      budget: Math.round(stats.income * 0.1),
+      budget: Math.round(effectiveIncome * 0.1),
       spent: stats.kakeibo[KakeiboCategory.UNEXPECTED] || 0,
       desc: 'Repairs, emergency medical, backup'
     }

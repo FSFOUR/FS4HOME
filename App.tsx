@@ -81,7 +81,7 @@ const DEFAULT_CHECKLIST: DailyChecklistItem[] = [
   { id: 'c15', category: 'Home', label: 'Plan tomorrow', completed: false },
 ];
 
-const DEFAULT_STATE: AppState = {
+export const DEFAULT_STATE: AppState = {
   transactions: [],
   tasks: [],
   schedule: [],
@@ -91,15 +91,19 @@ const DEFAULT_STATE: AppState = {
   }), {} as WeeklyFoodPlan),
   vehicleRecords: [],
   zakatGiven: 0,
-  monthlySavingsTarget: 5000,
-  userName: 'User',
+  monthlySavingsTarget: 0,
+  userName: '',
   monthlyTargets: {},
   weeklyReflections: {},
   monthlyReflections: {},
   routineBlueprint: DEFAULT_ROUTINE,
   dailyChecklist: DEFAULT_CHECKLIST,
   eveningReview: { well: '', improve: '', gratitude: '' },
-  prayerTimes: null
+  prayerTimes: null,
+  financialGoals: [],
+  financialDebts: [],
+  userStrategy: 'SAVE_MORE',
+  displayDensity: 'compact'
 };
 
 const Navigation = () => {
@@ -155,8 +159,23 @@ const Navigation = () => {
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    const parsed = saved ? JSON.parse(saved) : DEFAULT_STATE;
-    return { ...DEFAULT_STATE, ...parsed };
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // If legacy sample demo transactions are detected, sanitize to completely fresh app
+        if (
+          parsed.transactions && 
+          parsed.transactions.some((t: any) => t.id?.startsWith('st-') || t.description?.includes('Tech Corp') || t.description?.includes('Apartment House Rent'))
+        ) {
+          localStorage.removeItem(STORAGE_KEY);
+          return DEFAULT_STATE;
+        }
+        return { ...DEFAULT_STATE, ...parsed };
+      } catch {
+        return DEFAULT_STATE;
+      }
+    }
+    return DEFAULT_STATE;
   });
 
   useEffect(() => {

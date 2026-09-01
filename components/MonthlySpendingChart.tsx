@@ -55,16 +55,16 @@ const MonthlySpendingChart: React.FC<Props> = ({
     const wantsTarget: number = Number(targets[KakeiboCategory.WANTS]?.amount) || Math.round(targetTotal * 0.3);
 
     // Group actual transactions if available across recent months
-    if (transactions && transactions.length > 0) {
-      const monthMap = new Map<string, { total: number; needs: number; wants: number; culture: number; count: number }>();
-      
-      // Initialize past 6 months
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = d.toLocaleString('en-US', { month: 'short' });
-        monthMap.set(key, { total: 0, needs: 0, wants: 0, culture: 0, count: 0 });
-      }
+    const monthMap = new Map<string, { total: number; needs: number; wants: number; culture: number; count: number }>();
+    
+    // Initialize past 6 months
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.toLocaleString('en-US', { month: 'short' });
+      monthMap.set(key, { total: 0, needs: 0, wants: 0, culture: 0, count: 0 });
+    }
 
+    if (transactions && transactions.length > 0) {
       transactions.forEach(t => {
         if (t.type === WealthType.EXPENSE) {
           const d = new Date(t.date);
@@ -79,43 +79,23 @@ const MonthlySpendingChart: React.FC<Props> = ({
           }
         }
       });
-
-      return Array.from(monthMap.entries()).map(([month, val], idx) => {
-        // If it's the current month and there are current stats, use current values
-        const isCurrent = idx === monthMap.size - 1;
-        const actualSpent = isCurrent && currentSpent > 0 ? currentSpent : (val.total > 0 ? val.total : Math.round(targetTotal * (0.85 + (idx % 3) * 0.08)));
-        const actualNeeds = isCurrent && needsSpent > 0 ? needsSpent : (val.needs > 0 ? val.needs : Math.round(needsTarget * (0.9 + (idx % 2) * 0.06)));
-        const actualWants = isCurrent && wantsSpent > 0 ? wantsSpent : (val.wants > 0 ? val.wants : Math.round(wantsTarget * (0.8 + (idx % 3) * 0.1)));
-
-        return {
-          month,
-          spent: Number(actualSpent),
-          target: Number(targetTotal),
-          needs: Number(actualNeeds),
-          needsTarget: Number(needsTarget),
-          wants: Number(actualWants),
-          wantsTarget: Number(wantsTarget),
-          savingsBuffer: Math.max(0, targetTotal - Number(actualSpent)),
-          isCurrent
-        };
-      });
     }
 
-    // Default 6-month simulation anchored around actual current data
-    return months.map((month, idx) => {
-      const isCurrent = idx === months.length - 1;
-      const variation = [0.92, 1.05, 0.88, 0.98, 0.94, 1.0][idx];
-      const spentVal = isCurrent && currentSpent > 0 ? currentSpent : Math.round(targetTotal * variation);
+    return Array.from(monthMap.entries()).map(([month, val], idx) => {
+      const isCurrent = idx === monthMap.size - 1;
+      const actualSpent = isCurrent && currentSpent > 0 ? currentSpent : val.total;
+      const actualNeeds = isCurrent && needsSpent > 0 ? needsSpent : val.needs;
+      const actualWants = isCurrent && wantsSpent > 0 ? wantsSpent : val.wants;
 
       return {
         month,
-        spent: Number(spentVal),
+        spent: Number(actualSpent),
         target: Number(targetTotal),
-        needs: isCurrent && needsSpent > 0 ? needsSpent : Math.round(needsTarget * variation * 0.95),
+        needs: Number(actualNeeds),
         needsTarget: Number(needsTarget),
-        wants: isCurrent && wantsSpent > 0 ? wantsSpent : Math.round(wantsTarget * variation * 1.05),
+        wants: Number(actualWants),
         wantsTarget: Number(wantsTarget),
-        savingsBuffer: Math.max(0, targetTotal - Number(spentVal)),
+        savingsBuffer: Math.max(0, targetTotal - Number(actualSpent)),
         isCurrent
       };
     });

@@ -17,11 +17,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ state, onAddGoal, onUpdate
   const [targetDate, setTargetDate] = useState('2027-12-31');
   const [category, setCategory] = useState('Emergency Fund');
 
-  const goals = state.financialGoals || [
-    { id: 'g1', title: '6-Month Emergency Fund', targetAmount: 150000, currentAmount: 65000, monthlyContribution: 10000, targetDate: '2026-12-31', category: 'Security' },
-    { id: 'g2', title: 'Hajj & Umrah Pilgrimage', targetAmount: 400000, currentAmount: 180000, monthlyContribution: 15000, targetDate: '2027-06-30', category: 'Spiritual' },
-    { id: 'g3', title: 'Family Home Downpayment', targetAmount: 1200000, currentAmount: 320000, monthlyContribution: 25000, targetDate: '2028-12-31', category: 'Asset' },
-  ];
+  const goals = state.financialGoals || [];
 
   const handleAddGoal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,55 +168,75 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ state, onAddGoal, onUpdate
       )}
 
       {/* Goal Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {goals.map((g) => {
-          const pct = g.targetAmount > 0 ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0;
-          const remaining = Math.max(0, g.targetAmount - g.currentAmount);
-          const monthsLeft = g.monthlyContribution > 0 ? Math.ceil(remaining / g.monthlyContribution) : 0;
+      {goals.length === 0 ? (
+        <div className="glass-card p-8 rounded-2xl border border-emerald-500/20 text-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-950/80 border border-emerald-500/30 text-lime-400 flex items-center justify-center text-2xl mx-auto shadow-inner">
+            🎯
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-black text-white">No Financial Goals Set Yet</h3>
+            <p className="text-xs text-emerald-300/70 max-w-md mx-auto">
+              Start building your wealth roadmap. Set targets for an Emergency Fund, Hajj / Umrah, Home Purchase, or Family Milestones.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="px-4 py-2 bg-lime-400 hover:bg-lime-300 text-emerald-950 text-xs font-black rounded-xl shadow-md glow-lime-sm transition-all"
+          >
+            + Create Your First Goal
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {goals.map((g) => {
+            const pct = g.targetAmount > 0 ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0;
+            const remaining = Math.max(0, g.targetAmount - g.currentAmount);
+            const monthsLeft = g.monthlyContribution > 0 ? Math.ceil(remaining / g.monthlyContribution) : 0;
 
-          return (
-            <div key={g.id} className="glass-card p-3.5 rounded-xl border border-emerald-500/20 space-y-2.5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-bold text-white text-xs">{g.title}</h3>
-                  <span className="text-[10px] text-emerald-300/60 font-semibold">{g.category} • Target: {g.targetDate}</span>
+            return (
+              <div key={g.id} className="glass-card p-3.5 rounded-xl border border-emerald-500/20 space-y-2.5">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-bold text-white text-xs">{g.title}</h3>
+                    <span className="text-[10px] text-emerald-300/60 font-semibold">{g.category} • Target: {g.targetDate}</span>
+                  </div>
+                  <span className="text-xs font-black text-lime-400">{pct}%</span>
                 </div>
-                <span className="text-xs font-black text-lime-400">{pct}%</span>
-              </div>
 
-              {/* Progress Bar */}
-              <div className="space-y-1">
-                <div className="w-full bg-emerald-950 rounded-full h-1.5 overflow-hidden border border-emerald-800">
-                  <div className="h-full bg-lime-400 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                {/* Progress Bar */}
+                <div className="space-y-1">
+                  <div className="w-full bg-emerald-950 rounded-full h-1.5 overflow-hidden border border-emerald-800">
+                    <div className="h-full bg-lime-400 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-emerald-300/70 font-bold">
+                    <span>Saved: ₹{g.currentAmount.toLocaleString()}</span>
+                    <span>Target: ₹{g.targetAmount.toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-[10px] text-emerald-300/70 font-bold">
-                  <span>Saved: ₹{g.currentAmount.toLocaleString()}</span>
-                  <span>Target: ₹{g.targetAmount.toLocaleString()}</span>
-                </div>
-              </div>
 
-              {/* Quick Actions */}
-              <div className="flex items-center justify-between pt-1 border-t border-emerald-500/15 text-[10px]">
-                <span className="text-emerald-300/60">~{monthsLeft} months remaining</span>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => handleQuickAddFunds(g.id, 1000)}
-                    className="px-2 py-0.5 rounded bg-emerald-900/60 hover:bg-lime-400 hover:text-emerald-950 font-bold text-emerald-300 transition-colors"
-                  >
-                    +₹1K
-                  </button>
-                  <button
-                    onClick={() => handleQuickAddFunds(g.id, 5000)}
-                    className="px-2 py-0.5 rounded bg-emerald-900/60 hover:bg-lime-400 hover:text-emerald-950 font-bold text-emerald-300 transition-colors"
-                  >
-                    +₹5K
-                  </button>
+                {/* Quick Actions */}
+                <div className="flex items-center justify-between pt-1 border-t border-emerald-500/15 text-[10px]">
+                  <span className="text-emerald-300/60">~{monthsLeft} months remaining</span>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => handleQuickAddFunds(g.id, 1000)}
+                      className="px-2 py-0.5 rounded bg-emerald-900/60 hover:bg-lime-400 hover:text-emerald-950 font-bold text-emerald-300 transition-colors"
+                    >
+                      +₹1K
+                    </button>
+                    <button
+                      onClick={() => handleQuickAddFunds(g.id, 5000)}
+                      className="px-2 py-0.5 rounded bg-emerald-900/60 hover:bg-lime-400 hover:text-emerald-950 font-bold text-emerald-300 transition-colors"
+                    >
+                      +₹5K
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

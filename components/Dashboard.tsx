@@ -34,7 +34,7 @@ const Dashboard: React.FC<{
 
     const income = currentMonthTransactions
       .filter(t => t.type === WealthType.INCOME)
-      .reduce((acc, t) => acc + t.amount, 0) || 75000;
+      .reduce((acc, t) => acc + t.amount, 0);
 
     const expenses = currentMonthTransactions
       .filter(t => t.type === WealthType.EXPENSE)
@@ -55,7 +55,12 @@ const Dashboard: React.FC<{
       }
     });
 
-    return { income, expenses, savings, kakeiboBreakdown, currentMonthTransactions };
+    const recurringExpenses = state.transactions
+      .filter(t => t.isRecurring && t.type === WealthType.EXPENSE);
+
+    const totalRecurring = recurringExpenses.reduce((sum, t) => sum + t.amount, 0);
+
+    return { income, expenses, savings, kakeiboBreakdown, currentMonthTransactions, recurringExpenses, totalRecurring };
   }, [state]);
 
   useEffect(() => {
@@ -286,29 +291,35 @@ const Dashboard: React.FC<{
             <span className="text-[10px] text-lime-400 font-bold">This Month</span>
           </div>
 
-          <div className="space-y-2 text-xs">
-            {[
-              { title: 'Home Rent / EMI', amount: 22000, date: '1st of month', icon: '🏠' },
-              { title: 'Electricity & Internet', amount: 3200, date: '10th of month', icon: '⚡' },
-              { title: 'Cloud & Subscriptions', amount: 1499, date: '15th of month', icon: '📱' },
-            ].map((bill, i) => (
-              <div key={i} className="p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/10 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span>{bill.icon}</span>
-                  <div>
-                    <div className="text-xs font-bold text-white">{bill.title}</div>
-                    <div className="text-[10px] text-emerald-300/60">{bill.date}</div>
+          {stats.recurringExpenses.length === 0 ? (
+            <div className="text-center py-6 space-y-1">
+              <span className="text-xl">⚡</span>
+              <p className="text-xs text-emerald-300/70 font-medium">No recurring bills logged.</p>
+              <p className="text-[10px] text-emerald-400/50">Mark rent, WiFi, or EMIs as "Recurring" to track here.</p>
+            </div>
+          ) : (
+            <div className="space-y-2 text-xs">
+              {stats.recurringExpenses.slice(0, 4).map((bill) => (
+                <div key={bill.id} className="p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/10 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span>{bill.kakeiboCategory ? CATEGORY_ICONS[bill.kakeiboCategory] : '📱'}</span>
+                    <div>
+                      <div className="text-xs font-bold text-white truncate max-w-[140px]">{bill.description}</div>
+                      <div className="text-[10px] text-emerald-300/60">{new Date(bill.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</div>
+                    </div>
                   </div>
+                  <span className="font-black text-white text-xs">₹{bill.amount.toLocaleString()}</span>
                 </div>
-                <span className="font-black text-white text-xs">₹{bill.amount.toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          <div className="p-2 rounded-xl bg-lime-400/10 border border-lime-400/20 text-[10px] text-lime-300 flex items-center justify-between">
-            <span>Total Committed: ₹26,699</span>
-            <Link to="/budget" className="font-bold underline">Manage</Link>
-          </div>
+          {stats.recurringExpenses.length > 0 && (
+            <div className="p-2 rounded-xl bg-lime-400/10 border border-lime-400/20 text-[10px] text-lime-300 flex items-center justify-between">
+              <span>Total Committed: ₹{stats.totalRecurring.toLocaleString()}</span>
+              <Link to="/finance" className="font-bold underline">Manage</Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -325,29 +336,39 @@ const Dashboard: React.FC<{
             </Link>
           </div>
 
-          <div className="space-y-2">
-            {(state.financialGoals || [
-              { id: 'g1', title: '6-Month Emergency Fund', targetAmount: 150000, currentAmount: 65000, targetDate: '2026-12-31', category: 'Security' },
-              { id: 'g2', title: 'Hajj & Umrah Pilgrimage', targetAmount: 400000, currentAmount: 180000, targetDate: '2027-06-30', category: 'Spiritual' },
-            ]).map(g => {
-              const pct = Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100));
-              return (
-                <div key={g.id} className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/10 space-y-1.5">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-white">{g.title}</span>
-                    <span className="text-lime-400">{pct}%</span>
+          {(!state.financialGoals || state.financialGoals.length === 0) ? (
+            <div className="text-center py-6 space-y-2">
+              <span className="text-xl">🎯</span>
+              <p className="text-xs text-emerald-300/70 font-medium">No financial goals created yet.</p>
+              <Link 
+                to="/goals"
+                className="inline-block px-3 py-1 bg-lime-400 text-emerald-950 font-black text-[11px] rounded-lg shadow-sm"
+              >
+                + Set Your First Goal
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {state.financialGoals.slice(0, 3).map(g => {
+                const pct = g.targetAmount > 0 ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0;
+                return (
+                  <div key={g.id} className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/10 space-y-1.5">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-white">{g.title}</span>
+                      <span className="text-lime-400">{pct}%</span>
+                    </div>
+                    <div className="w-full bg-emerald-950 rounded-full h-1.5 overflow-hidden border border-emerald-800">
+                      <div className="h-full bg-lime-400 rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-emerald-300/60">
+                      <span>₹{g.currentAmount.toLocaleString()} saved</span>
+                      <span>Target: ₹{g.targetAmount.toLocaleString()}</span>
+                    </div>
                   </div>
-                  <div className="w-full bg-emerald-950 rounded-full h-1.5 overflow-hidden border border-emerald-800">
-                    <div className="h-full bg-lime-400 rounded-full" style={{ width: `${pct}%` }} />
-                  </div>
-                  <div className="flex justify-between text-[10px] text-emerald-300/60">
-                    <span>₹{g.currentAmount.toLocaleString()} saved</span>
-                    <span>Target: ₹{g.targetAmount.toLocaleString()}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Monthly Spending Trends & Targets Chart */}

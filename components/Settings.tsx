@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppState, DisplayDensity } from '../types';
+import { DEFAULT_STATE } from '../App';
 
 interface SettingsProps {
   state: AppState;
@@ -60,14 +61,26 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
     }
   };
 
-  const handleResetData = () => {
-    if (window.confirm('Are you sure you want to reset demo data? This will clear all transactions.')) {
+  const handleClearTransactions = () => {
+    if (window.confirm('Are you sure you want to clear all transactions? This will reset all transaction history.')) {
       onUpdateState(prev => ({
         ...prev,
         transactions: [],
         zakatGiven: 0
       }));
-      onShowToast('Data reset complete ✓');
+      onShowToast('Transactions cleared ✓');
+    }
+  };
+
+  const handleFullReset = () => {
+    if (window.confirm('⚠️ WARNING: Are you sure you want to delete ALL data and start with a completely fresh, empty app for a new user? This will reset all transactions, goals, debts, food plan, vehicle records, and routines.')) {
+      localStorage.removeItem('fs4home_data');
+      localStorage.removeItem('fs4home_density');
+      document.documentElement.className = 'density-compact';
+      onUpdateState(DEFAULT_STATE);
+      setNameInput('');
+      setSavingsInput(0);
+      onShowToast('App wiped to fresh new user state ✓');
     }
   };
 
@@ -353,16 +366,29 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/20 flex items-center justify-between">
+          <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/20 flex items-center justify-between">
             <div>
-              <div className="text-xs font-bold text-rose-300">Clear Transaction History</div>
-              <p className="text-[10px] text-rose-200/60">Permanently delete current demo transactions.</p>
+              <div className="text-xs font-bold text-amber-300">Clear Transaction History</div>
+              <p className="text-[10px] text-amber-200/60">Reset all income, expense, and Zakat transaction logs.</p>
             </div>
             <button
-              onClick={handleResetData}
-              className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold border border-rose-500/30 transition-colors"
+              onClick={handleClearTransactions}
+              className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/30 transition-colors"
             >
-              Reset Data
+              Clear Logs
+            </button>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/30 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-rose-300">Reset All App Data (Fresh User)</div>
+              <p className="text-[10px] text-rose-200/70">Wipe all demo data, goals, tasks, routines, and start completely fresh.</p>
+            </div>
+            <button
+              onClick={handleFullReset}
+              className="px-3 py-1.5 rounded-lg bg-rose-500 text-white hover:bg-rose-600 text-xs font-bold shadow-sm transition-colors"
+            >
+              Fresh App Reset
             </button>
           </div>
         </div>

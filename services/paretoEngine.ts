@@ -758,11 +758,7 @@ export function calculateParetoInsights(
   const debts: DebtParetoItem[] = [];
   const rawDebts: FinancialDebt[] = (state.financialDebts && state.financialDebts.length > 0)
     ? state.financialDebts
-    : [
-        // Realistic defaults if empty but user has EMI transactions
-        { id: 'd-cc', name: 'Credit Card Outstanding', balance: 45000, interestRate: 38, monthlyEMI: 4500, category: 'Credit Card' },
-        { id: 'd-car', name: 'Car Loan EMI', balance: 280000, interestRate: 9.5, monthlyEMI: 7200, category: 'Car Loan' }
-      ];
+    : [];
 
   const totalDebtBalance = rawDebts.reduce((s, d) => s + d.balance, 0);
   const totalAnnualInterestCost = rawDebts.reduce((s, d) => s + (d.balance * (d.interestRate / 100)), 0);
@@ -793,11 +789,7 @@ export function calculateParetoInsights(
   // 11. Goal Acceleration Calculations
   const goals: FinancialGoal[] = (state.financialGoals && state.financialGoals.length > 0)
     ? state.financialGoals
-    : [
-        { id: 'g1', title: 'Emergency Fund', targetAmount: 150000, currentAmount: 45000, monthlyContribution: 5000, targetDate: '2027-06-01', category: 'Safety', icon: '🛡️' },
-        { id: 'g2', title: 'New Vehicle Down Payment', targetAmount: 200000, currentAmount: 60000, monthlyContribution: 7000, targetDate: '2027-12-01', category: 'Major Purchase', icon: '🚗' },
-        { id: 'g3', title: 'Hajj / Umrah Journey', targetAmount: 350000, currentAmount: 110000, monthlyContribution: 10000, targetDate: '2028-05-01', category: 'Spiritual', icon: '🕋' }
-      ];
+    : [];
 
   const goalAccelerations = goals.map(g => {
     const remaining = Math.max(0, g.targetAmount - g.currentAmount);
