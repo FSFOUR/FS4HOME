@@ -2,8 +2,16 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AppState, WealthType, KakeiboCategory, Transaction } from '../types';
 import { getDashboardIntel } from '../services/geminiService';
+import { 
+  DEFAULT_MONTHLY_BUDGET, 
+  getOrCreateMonthlyPlan, 
+  calculateBudgetSummary,
+  calculateBudgetCategoryAlerts
+} from '../services/budgetService';
 import QuickAddModal from './QuickAddModal';
 import MonthlySpendingChart from './MonthlySpendingChart';
+import { WelcomeBanner } from './WelcomeBanner';
+import { motion } from 'motion/react';
 
 const CATEGORY_ICONS: Record<KakeiboCategory, string> = {
   [KakeiboCategory.NEEDS]: '🏠',
@@ -92,9 +100,140 @@ const Dashboard: React.FC<{
     ? Math.round(((stats.kakeiboBreakdown[KakeiboCategory.NEEDS] + stats.kakeiboBreakdown[KakeiboCategory.WANTS]) / stats.expenses) * 100)
     : 80;
 
+  // Daily Spending Limit & Monthly Pacer Calculations
+  const dailyPacerStats = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const currentDayOfMonth = now.getDate();
+    const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}`;
+    
+    const totalDaysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const daysRemaining = Math.max(1, totalDaysInMonth - currentDayOfMonth + 1);
+    const daysElapsed = currentDayOfMonth;
+
+    // Monthly plan & summary
+    const plan = getOrCreateMonthlyPlan(
+      state.monthlyBudgetPlans,
+      state.customBudgetCategories,
+      currentMonthKey
+    );
+    const summary = calculateBudgetSummary(plan, state.transactions || [], currentMonthKey);
+    const monthlyBudget = plan.totalMonthlyBudget || DEFAULT_MONTHLY_BUDGET;
+    const actualSpentThisMonth = summary.actualExpenses;
+    const remainingMonthlyBudget = Math.max(0, monthlyBudget - actualSpentThisMonth);
+
+    // Baseline daily allocation (spread evenly across all days of the month)
+    const baselineDailyLimit = Math.max(1, Math.round(monthlyBudget / totalDaysInMonth));
+
+    // Dynamic daily spending limit: remaining budget spread over remaining days
+    const dynamicDailyLimit = Math.max(0, Math.round(remainingMonthlyBudget / daysRemaining));
+
+    // Target daily limit: prioritize dynamic daily limit if budget remains, else baseline
+    const targetDailyLimit = dynamicDailyLimit > 0 ? dynamicDailyLimit : baselineDailyLimit;
+
+    // Today's eligible day-to-day expenses
+    const todayExpenses = (state.transactions || []).filter(t => {
+      if (!t.date) return false;
+      const d = new Date(t.date);
+      const isToday = (
+        d.getFullYear() === currentYear &&
+        d.getMonth() === currentMonth &&
+        d.getDate() === currentDayOfMonth
+      );
+      const tType = t.transactionType || (t.type === WealthType.EXPENSE ? 'Expense' : t.type);
+      const isEligibleExpense = tType === 'Expense' || tType === 'Debt Payment';
+      return isToday && isEligibleExpense;
+    }).reduce((sum, t) => sum + t.amount, 0);
+
+    const remainingToday = Math.max(0, targetDailyLimit - todayExpenses);
+    const overSpentToday = Math.max(0, todayExpenses - targetDailyLimit);
+
+    // Daily percentage spent
+    const percentSpentToday = targetDailyLimit > 0 
+      ? Math.round((todayExpenses / targetDailyLimit) * 100) 
+      : 0;
+    const clampedProgress = Math.min(100, Math.max(0, percentSpentToday));
+
+    // Monthly pacing comparison
+    const monthTimeProgressPct = Math.round((daysElapsed / totalDaysInMonth) * 100);
+    const budgetSpentPct = monthlyBudget > 0 
+      ? Math.round((actualSpentThisMonth / monthlyBudget) * 100) 
+      : 0;
+
+    let paceStatus: 'under' | 'nearing' | 'over';
+    let paceColor = '';
+
+    if (todayExpenses > targetDailyLimit) {
+      paceStatus = 'over';
+      paceColor = 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+    } else if (percentSpentToday >= 75) {
+      paceStatus = 'nearing';
+      paceColor = 'text-amber-300 bg-amber-500/10 border-amber-500/30';
+    } else {
+      paceStatus = 'under';
+      paceColor = 'text-lime-300 bg-lime-500/10 border-lime-500/30';
+    }
+
+    return {
+      currentDayOfMonth,
+      totalDaysInMonth,
+      daysRemaining,
+      daysElapsed,
+      monthlyBudget,
+      actualSpentThisMonth,
+      remainingMonthlyBudget,
+      baselineDailyLimit,
+      dynamicDailyLimit,
+      targetDailyLimit,
+      todayExpenses,
+      remainingToday,
+      overSpentToday,
+      percentSpentToday,
+      clampedProgress,
+      monthTimeProgressPct,
+      budgetSpentPct,
+      paceStatus,
+      paceColor,
+      monthName: now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+    };
+  }, [state.monthlyBudgetPlans, state.customBudgetCategories, state.transactions]);
+
+  // Intelligent Budget Category Alerts (Triggers when any category exceeds >=80% of planned allocation)
+  const budgetAlertsSummary = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}`;
+    
+    const plan = getOrCreateMonthlyPlan(
+      state.monthlyBudgetPlans,
+      state.customBudgetCategories,
+      currentMonthKey
+    );
+    return calculateBudgetCategoryAlerts(plan, state.transactions || [], currentMonthKey);
+  }, [state.monthlyBudgetPlans, state.customBudgetCategories, state.transactions]);
+
   return (
     <div className="space-y-3.5 md:space-y-4 animate-in fade-in duration-300 text-slate-100 max-w-6xl mx-auto pb-12">
       
+      {/* ========================================================================= */}
+      {/* WELCOME BANNER & INTELLIGENT BUDGET NOTIFICATION CENTER                   */}
+      {/* ========================================================================= */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <WelcomeBanner 
+          userName={state.userName}
+          onUpdateUserName={onUpdateUser}
+          alertsSummary={budgetAlertsSummary}
+          dailyPacerStats={dailyPacerStats}
+          onOpenQuickAdd={() => setIsModalOpen(true)}
+        />
+      </motion.div>
+
       {/* ========================================================================= */}
       {/* ROW 1: COMPACT KPI GRID (4 cols desktop, 2 cols mobile)                   */}
       {/* ========================================================================= */}
@@ -165,6 +304,174 @@ const Dashboard: React.FC<{
           </div>
           <div className="w-full bg-emerald-950 rounded-full h-1.5 overflow-hidden border border-emerald-800">
             <div className="h-full bg-lime-400 rounded-full" style={{ width: `${savingsProgress}%` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* DAILY SPENDING LIMIT & MONTHLY PACER PROGRESS                             */}
+      {/* ========================================================================= */}
+      <div className="glass-card p-3.5 md:p-4 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-[#072415]/95 via-[#0c2f1e]/90 to-[#081e13]/95 shadow-lg relative overflow-hidden">
+        {/* Ambient glow accent */}
+        <div className="absolute -top-16 -right-16 w-44 h-44 rounded-full bg-lime-400/10 blur-2xl pointer-events-none" />
+
+        {/* Header with Title, Status Badge, and Quick Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-500/15 relative z-10">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="p-1 rounded-lg bg-lime-400/20 text-lime-300 text-sm">⏱️</span>
+              <h2 className="text-sm md:text-base font-black text-white tracking-tight">
+                Daily Spending Limit
+              </h2>
+              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${dailyPacerStats.paceColor}`}>
+                {dailyPacerStats.paceStatus === 'over' ? '⚠️ Exceeded Daily Limit' : dailyPacerStats.paceStatus === 'nearing' ? '⚡ Nearing Daily Limit' : '✓ On Track'}
+              </span>
+              {budgetAlertsSummary.alerts.length > 0 && (
+                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                  budgetAlertsSummary.criticalCount > 0 
+                    ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' 
+                    : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                }`}>
+                  ⚠️ {budgetAlertsSummary.alerts.length} Category Alert{budgetAlertsSummary.alerts.length > 1 ? 's' : ''} (≥80%)
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-emerald-200/80 mt-1">
+              Calculated from your <span className="text-lime-300 font-bold">₹{dailyPacerStats.monthlyBudget.toLocaleString()}</span> monthly budget for {dailyPacerStats.monthName}.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-lime-400 hover:bg-lime-300 text-emerald-950 text-xs font-black shadow-sm transition-all flex items-center gap-1.5"
+            >
+              <span>+</span>
+              <span>Log Expense</span>
+            </button>
+            <Link
+              to="/budget"
+              className="px-2.5 py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-500/20 text-emerald-300 text-xs font-bold transition-all"
+            >
+              Budget Details →
+            </Link>
+          </div>
+        </div>
+
+        {/* Primary Daily Spending Bar */}
+        <div className="mt-3.5 space-y-2 relative z-10">
+          <div className="flex items-baseline justify-between flex-wrap gap-2">
+            <div>
+              <span className="text-xs text-emerald-300/80 font-medium">Today's Spend: </span>
+              <span className="text-xl md:text-2xl font-black text-white tracking-tight">
+                ₹{dailyPacerStats.todayExpenses.toLocaleString()}
+              </span>
+              <span className="text-xs text-emerald-400/70 font-medium ml-1">
+                / ₹{dailyPacerStats.targetDailyLimit.toLocaleString()} daily limit
+              </span>
+            </div>
+
+            <div className="text-xs font-bold">
+              {dailyPacerStats.paceStatus === 'over' ? (
+                <span className="text-rose-400">
+                  +₹{dailyPacerStats.overSpentToday.toLocaleString()} over limit today
+                </span>
+              ) : (
+                <span className="text-lime-300">
+                  ₹{dailyPacerStats.remainingToday.toLocaleString()} left to spend today
+                </span>
+              )}
+              <span className="text-emerald-400/70 ml-1.5 font-normal">
+                ({dailyPacerStats.percentSpentToday}%)
+              </span>
+            </div>
+          </div>
+
+          {/* Visual Progress Bar with markers */}
+          <div className="space-y-1">
+            <div className="w-full bg-emerald-950/90 rounded-full h-3.5 p-0.5 border border-emerald-500/30 overflow-hidden relative shadow-inner">
+              {/* Reference indicator markers */}
+              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-emerald-600/40 z-10" title="50% Target Marker" />
+              <div className="absolute top-0 bottom-0 left-3/4 w-px bg-emerald-600/40 z-10" title="75% Warning Marker" />
+
+              <div
+                className={`h-full rounded-full transition-all duration-500 relative ${
+                  dailyPacerStats.paceStatus === 'over'
+                    ? 'bg-gradient-to-r from-amber-500 to-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.6)]'
+                    : dailyPacerStats.paceStatus === 'nearing'
+                    ? 'bg-gradient-to-r from-lime-400 to-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                    : 'bg-gradient-to-r from-emerald-400 to-lime-400 shadow-[0_0_8px_rgba(163,230,53,0.5)]'
+                }`}
+                style={{ width: `${dailyPacerStats.clampedProgress}%` }}
+              />
+            </div>
+
+            <div className="flex justify-between text-[10px] text-emerald-400/60 font-medium px-0.5">
+              <span>₹0</span>
+              <span>50%</span>
+              <span>75%</span>
+              <span className="font-bold text-emerald-300/80">Limit: ₹{dailyPacerStats.targetDailyLimit.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3-Column Contextual Breakdown: Daily Allowance, Monthly Remaining, Pace Health */}
+        <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-3 gap-2 pt-3 border-t border-emerald-500/15 text-xs relative z-10">
+          {/* Card 1: Dynamic Safe Allowance */}
+          <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/15 flex flex-col justify-between">
+            <span className="text-[10px] text-emerald-300/70 font-semibold uppercase tracking-wider">
+              Remaining Daily Pace
+            </span>
+            <div className="my-1 flex items-baseline gap-1.5">
+              <span className="text-base md:text-lg font-black text-lime-300">
+                ₹{dailyPacerStats.dynamicDailyLimit.toLocaleString()}
+              </span>
+              <span className="text-[11px] text-emerald-400/70 font-medium">/ day</span>
+            </div>
+            <span className="text-[10px] text-emerald-300/60">
+              For remaining {dailyPacerStats.daysRemaining} days in month
+            </span>
+          </div>
+
+          {/* Card 2: Remaining Month Budget */}
+          <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/15 flex flex-col justify-between">
+            <span className="text-[10px] text-emerald-300/70 font-semibold uppercase tracking-wider">
+              Month Budget Remaining
+            </span>
+            <div className="my-1 flex items-baseline gap-1.5">
+              <span className="text-base md:text-lg font-black text-white">
+                ₹{dailyPacerStats.remainingMonthlyBudget.toLocaleString()}
+              </span>
+              <span className="text-[10px] text-emerald-400/60">
+                of ₹{dailyPacerStats.monthlyBudget.toLocaleString()}
+              </span>
+            </div>
+            <div className="w-full bg-emerald-950 rounded-full h-1.5 overflow-hidden border border-emerald-800/80">
+              <div 
+                className={`h-full rounded-full ${dailyPacerStats.budgetSpentPct > 90 ? 'bg-rose-400' : 'bg-lime-400'}`} 
+                style={{ width: `${Math.min(100, dailyPacerStats.budgetSpentPct)}%` }} 
+              />
+            </div>
+          </div>
+
+          {/* Card 3: Month Time vs Budget Burn Rate */}
+          <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/15 flex flex-col justify-between">
+            <span className="text-[10px] text-emerald-300/70 font-semibold uppercase tracking-wider">
+              Time vs Spending Pace
+            </span>
+            <div className="my-1 flex items-center justify-between text-[11px]">
+              <span className="text-white font-bold">
+                Day {dailyPacerStats.currentDayOfMonth}/{dailyPacerStats.totalDaysInMonth} ({dailyPacerStats.monthTimeProgressPct}%)
+              </span>
+              <span className={dailyPacerStats.budgetSpentPct > dailyPacerStats.monthTimeProgressPct ? 'text-amber-400 font-bold' : 'text-lime-400 font-bold'}>
+                {dailyPacerStats.budgetSpentPct}% spent
+              </span>
+            </div>
+            <span className="text-[10px] text-emerald-300/70 font-medium">
+              {dailyPacerStats.budgetSpentPct <= dailyPacerStats.monthTimeProgressPct 
+                ? '🟢 Spending slower than time elapsed (On Track)' 
+                : '🟡 Spending faster than time elapsed (Caution)'}
+            </span>
           </div>
         </div>
       </div>
@@ -378,9 +685,14 @@ const Dashboard: React.FC<{
               <h3 className="text-xs md:text-sm font-black text-white">Spending Trends vs Targets</h3>
               <span className="text-[10px] text-lime-400 font-mono">Recharts</span>
             </div>
-            <Link to="/budget" className="text-[10px] text-emerald-400/70 hover:text-lime-300 font-bold">
-              Budget Rules →
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link to="/report" className="text-[10px] text-lime-400 hover:text-lime-300 font-bold bg-lime-400/10 hover:bg-lime-400/20 px-2 py-0.5 rounded border border-lime-400/20 transition-colors">
+                📊 Monthly Report →
+              </Link>
+              <Link to="/budget" className="text-[10px] text-emerald-400/70 hover:text-lime-300 font-bold">
+                Budget Rules →
+              </Link>
+            </div>
           </div>
           <MonthlySpendingChart 
             spending={stats.kakeiboBreakdown} 
@@ -424,6 +736,7 @@ const Dashboard: React.FC<{
       <QuickAddModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
+        state={state}
         onAddTransaction={onAddTransaction} 
       />
     </div>

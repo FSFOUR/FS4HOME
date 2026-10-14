@@ -4,22 +4,29 @@ import { ICONS } from '../constants';
 import QuickAddModal from './QuickAddModal';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { Toast } from './Toast';
-import { Transaction, AppState } from '../types';
+import { Transaction, AppState, RecurringExpenseItem, AutofillMemoryItem } from '../types';
+import { getOrCreateMonthlyPlan, calculateBudgetCategoryAlerts } from '../services/budgetService';
 
 interface LayoutProps {
   children: React.ReactNode;
   state?: AppState;
   onAddTransaction?: (t: Omit<Transaction, 'id'>) => void;
+  onAddRecurringExpense?: (item: Omit<RecurringExpenseItem, 'id'>) => void;
+  onSaveAutofillMemory?: (item: Omit<AutofillMemoryItem, 'id'>) => void;
   toastMessage?: string | null;
   onCloseToast?: () => void;
+  showToast?: (msg: string) => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
   children, 
   state,
   onAddTransaction,
+  onAddRecurringExpense,
+  onSaveAutofillMemory,
   toastMessage = null,
-  onCloseToast = () => {}
+  onCloseToast = () => {},
+  showToast
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -48,6 +55,21 @@ const Layout: React.FC<LayoutProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Intelligent Category Budget Alerts Summary
+  const budgetAlerts = React.useMemo(() => {
+    if (!state) return null;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentMonthKey = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}`;
+    const plan = getOrCreateMonthlyPlan(
+      state.monthlyBudgetPlans,
+      state.customBudgetCategories,
+      currentMonthKey
+    );
+    return calculateBudgetCategoryAlerts(plan, state.transactions || [], currentMonthKey);
+  }, [state?.monthlyBudgetPlans, state?.customBudgetCategories, state?.transactions]);
+
   // Title lookup
   const getPageTitle = () => {
     switch (location.pathname) {
@@ -55,6 +77,8 @@ const Layout: React.FC<LayoutProps> = ({
       case '/finance': return 'Transactions & Records';
       case '/pareto':
       case '/insights': return '80/20 Insights';
+      case '/report':
+      case '/reports': return 'Monthly Report';
       case '/budget': return 'Budget & Allocation';
       case '/goals': return 'Financial Goals';
       case '/schedule': return 'Schedule & Routines';
@@ -72,6 +96,7 @@ const Layout: React.FC<LayoutProps> = ({
       items: [
         { path: '/', icon: ICONS.Dashboard, label: 'Dashboard', short: 'Home' },
         { path: '/finance', icon: ICONS.Finance, label: 'Transactions', short: 'Txns' },
+        { path: '/report', icon: ICONS.Analytics, label: 'Monthly Report', short: 'Report' },
         { path: '/budget', icon: ICONS.Finance, label: 'Budget', short: 'Budget' },
         { path: '/pareto', icon: ICONS.Analytics || ICONS.Dashboard, label: '80/20 Insights', short: '80/20' },
         { path: '/goals', icon: ICONS.Schedule, label: 'Goals', short: 'Goals' },
@@ -145,6 +170,26 @@ const Layout: React.FC<LayoutProps> = ({
               <span className="hidden sm:inline">Add</span>
             </button>
           )}
+
+          {/* Intelligent Budget Alerts Bell */}
+          <Link
+            to="/"
+            className="relative p-1.5 rounded-lg text-emerald-300/80 hover:text-white hover:bg-emerald-900/40 transition-colors"
+            title={
+              budgetAlerts && budgetAlerts.alerts.length > 0
+                ? `${budgetAlerts.alerts.length} budget category alerts (≥80% limit)`
+                : 'Budget categories healthy'
+            }
+          >
+            <span className="text-sm">🔔</span>
+            {budgetAlerts && budgetAlerts.alerts.length > 0 && (
+              <span className={`absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full text-[9px] font-black text-white shadow-sm ${
+                budgetAlerts.criticalCount > 0 ? 'bg-rose-500 animate-pulse' : 'bg-amber-500'
+              }`}>
+                {budgetAlerts.alerts.length}
+              </span>
+            )}
+          </Link>
 
           {/* Settings Link */}
           <Link
@@ -227,11 +272,11 @@ const Layout: React.FC<LayoutProps> = ({
               }`}
             >
               <div className="w-6 h-6 rounded-full bg-lime-400/20 border border-lime-400/40 flex items-center justify-center text-lime-400 font-bold text-[10px]">
-                {state?.userName ? state.userName.slice(0, 2).toUpperCase() : 'ME'}
+                {state?.userName && state.userName !== 'User' ? state.userName.slice(0, 2).toUpperCase() : 'SH'}
               </div>
               {!isSidebarCollapsed && (
                 <div className="truncate">
-                  <div className="text-xs font-bold text-white truncate">{state?.userName || 'User'}</div>
+                  <div className="text-xs font-bold text-white truncate">{state?.userName && state.userName !== 'User' ? state.userName : 'Shafi'}</div>
                   <div className="text-[9px] text-emerald-400/70 font-medium">80/20 Active</div>
                 </div>
               )}
@@ -328,6 +373,7 @@ const Layout: React.FC<LayoutProps> = ({
             {/* Grid of Tools */}
             <div className="grid grid-cols-3 gap-1.5">
               {[
+                { path: '/report', icon: '📊', label: 'Report' },
                 { path: '/goals', icon: '🎯', label: 'Goals' },
                 { path: '/schedule', icon: '📅', label: 'Schedule' },
                 { path: '/lifestyle', icon: '🍽️', label: 'Lifestyle' },
@@ -372,7 +418,11 @@ const Layout: React.FC<LayoutProps> = ({
         <QuickAddModal 
           isOpen={isQuickAddOpen} 
           onClose={() => setIsQuickAddOpen(false)} 
+          state={state}
           onAddTransaction={onAddTransaction} 
+          onAddRecurringExpense={onAddRecurringExpense}
+          onSaveAutofillMemory={onSaveAutofillMemory}
+          onShowToast={showToast}
         />
       )}
 

@@ -17,9 +17,12 @@ import {
   RoutinePhase,
   RoutineSubsection,
   DailyChecklistItem,
-  PrayerTimes,
   FinancialGoal,
-  UserStrategy
+  UserStrategy,
+  BudgetCategory,
+  MonthlyBudgetPlan,
+  RecurringExpenseItem,
+  AutofillMemoryItem
 } from './types';
 import { ICONS, DAYS_OF_WEEK } from './constants';
 import Layout from './components/Layout';
@@ -33,7 +36,9 @@ import { BudgetView } from './components/BudgetView';
 import { GoalsView } from './components/GoalsView';
 import { CalculatorModal } from './components/Tools/CalculatorModal';
 import { Settings } from './components/Settings';
+import { MonthlyReportGenerator } from './components/MonthlyReportGenerator';
 import { fetchPrayerTimes } from './services/geminiService';
+import { DEFAULT_BUDGET_CATEGORIES, DEFAULT_AUTOFILL_ITEMS } from './services/budgetService';
 
 const STORAGE_KEY = 'fs4home_data';
 
@@ -92,7 +97,7 @@ export const DEFAULT_STATE: AppState = {
   vehicleRecords: [],
   zakatGiven: 0,
   monthlySavingsTarget: 0,
-  userName: '',
+  userName: 'Shafi',
   monthlyTargets: {},
   weeklyReflections: {},
   monthlyReflections: {},
@@ -103,7 +108,17 @@ export const DEFAULT_STATE: AppState = {
   financialGoals: [],
   financialDebts: [],
   userStrategy: 'SAVE_MORE',
-  displayDensity: 'compact'
+  displayDensity: 'compact',
+  monthlyBudgetPlans: {},
+  customBudgetCategories: DEFAULT_BUDGET_CATEGORIES,
+  recurringExpenses: [],
+  autofillMemory: DEFAULT_AUTOFILL_ITEMS,
+  accountBalances: {
+    'Bank Account (Primary)': 0,
+    'Cash in Hand': 0,
+    'UPI / GPay': 0,
+    'Credit Card': 0,
+  }
 };
 
 const Navigation = () => {
@@ -170,7 +185,10 @@ const App: React.FC = () => {
           localStorage.removeItem(STORAGE_KEY);
           return DEFAULT_STATE;
         }
-        return { ...DEFAULT_STATE, ...parsed };
+        const resolvedUserName = parsed.userName && parsed.userName.trim() && parsed.userName.trim() !== 'User'
+          ? parsed.userName.trim()
+          : 'Shafi';
+        return { ...DEFAULT_STATE, ...parsed, userName: resolvedUserName };
       } catch {
         return DEFAULT_STATE;
       }
@@ -296,6 +314,77 @@ const App: React.FC = () => {
       financialGoals: [...(prev.financialGoals || []), { ...g, id: crypto.randomUUID() }]
     }));
     showToast('Financial goal saved ✓');
+  };
+
+  const updateMonthlyBudgetPlan = (monthKey: string, plan: MonthlyBudgetPlan) => {
+    setState(prev => ({
+      ...prev,
+      monthlyBudgetPlans: {
+        ...(prev.monthlyBudgetPlans || {}),
+        [monthKey]: plan,
+      }
+    }));
+  };
+
+  const updateMasterCategories = (cats: BudgetCategory[]) => {
+    setState(prev => ({ ...prev, customBudgetCategories: cats }));
+  };
+
+  const addRecurringExpense = (item: Omit<RecurringExpenseItem, 'id'>) => {
+    const newItem: RecurringExpenseItem = { ...item, id: crypto.randomUUID() };
+    setState(prev => ({
+      ...prev,
+      recurringExpenses: [...(prev.recurringExpenses || []), newItem]
+    }));
+    showToast(`Recurring schedule for "${item.name}" created ✓`);
+  };
+
+  const updateRecurringExpense = (updatedItem: RecurringExpenseItem) => {
+    setState(prev => ({
+      ...prev,
+      recurringExpenses: (prev.recurringExpenses || []).map(r => r.id === updatedItem.id ? updatedItem : r)
+    }));
+    showToast('Recurring schedule updated ✓');
+  };
+
+  const deleteRecurringExpense = (id: string) => {
+    setState(prev => ({
+      ...prev,
+      recurringExpenses: (prev.recurringExpenses || []).filter(r => r.id !== id)
+    }));
+    showToast('Recurring schedule removed ✓');
+  };
+
+  const saveAutofillMemory = (item: Omit<AutofillMemoryItem, 'id'>) => {
+    setState(prev => {
+      const existing = prev.autofillMemory || DEFAULT_AUTOFILL_ITEMS;
+      const foundIdx = existing.findIndex(m => 
+        m.type.toLowerCase() === item.type.toLowerCase() && 
+        m.description.toLowerCase() === item.description.toLowerCase()
+      );
+
+      let updated: AutofillMemoryItem[];
+      if (foundIdx >= 0) {
+        updated = [...existing];
+        updated[foundIdx] = {
+          ...updated[foundIdx],
+          ...item,
+          frequencyCount: (updated[foundIdx].frequencyCount || 1) + 1,
+          lastUsed: new Date().toISOString()
+        };
+      } else {
+        updated = [{ ...item, id: crypto.randomUUID(), frequencyCount: 1, lastUsed: new Date().toISOString() }, ...existing];
+      }
+      return { ...prev, autofillMemory: updated };
+    });
+  };
+
+  const deleteAutofillItem = (id: string) => {
+    setState(prev => ({
+      ...prev,
+      autofillMemory: (prev.autofillMemory || []).filter(m => m.id !== id)
+    }));
+    showToast('Autofill suggestion deleted ✓');
   };
 
   const updateUserStrategy = (strat: UserStrategy) => {
@@ -473,8 +562,11 @@ const App: React.FC = () => {
       <Layout 
         state={state} 
         onAddTransaction={addTransaction}
+        onAddRecurringExpense={addRecurringExpense}
+        onSaveAutofillMemory={saveAutofillMemory}
         toastMessage={toastMessage}
         onCloseToast={() => setToastMessage(null)}
+        showToast={showToast}
       >
         <AnimatedRoutes
           state={state}
@@ -502,6 +594,12 @@ const App: React.FC = () => {
           addTask={addTask}
           updateFoodPlan={updateFoodPlan}
           addVehicleRecord={addVehicleRecord}
+          updateMonthlyBudgetPlan={updateMonthlyBudgetPlan}
+          updateMasterCategories={updateMasterCategories}
+          addRecurringExpense={addRecurringExpense}
+          updateRecurringExpense={updateRecurringExpense}
+          deleteRecurringExpense={deleteRecurringExpense}
+          deleteAutofillItem={deleteAutofillItem}
         />
       </Layout>
     </Router>
@@ -534,6 +632,12 @@ interface AnimatedRoutesProps {
   addTask: (task: any) => void;
   updateFoodPlan: (plan: any) => void;
   addVehicleRecord: (record: any) => void;
+  updateMonthlyBudgetPlan: (monthKey: string, plan: MonthlyBudgetPlan) => void;
+  updateMasterCategories: (cats: BudgetCategory[]) => void;
+  addRecurringExpense: (item: Omit<RecurringExpenseItem, 'id'>) => void;
+  updateRecurringExpense: (item: RecurringExpenseItem) => void;
+  deleteRecurringExpense: (id: string) => void;
+  deleteAutofillItem: (id: string) => void;
 }
 
 const AnimatedRoutes: React.FC<AnimatedRoutesProps> = (props) => {
@@ -573,6 +677,14 @@ const AnimatedRoutes: React.FC<AnimatedRoutesProps> = (props) => {
             <BudgetView 
               state={props.state} 
               onUpdateTarget={(val) => props.setState(prev => ({ ...prev, monthlySavingsTarget: val }))}
+              onUpdateMonthlyBudgetPlan={props.updateMonthlyBudgetPlan}
+              onUpdateMasterCategories={props.updateMasterCategories}
+              onAddTransaction={props.addTransaction}
+              onAddRecurringExpense={props.addRecurringExpense}
+              onUpdateRecurringExpense={props.updateRecurringExpense}
+              onDeleteRecurringExpense={props.deleteRecurringExpense}
+              onDeleteAutofillItem={props.deleteAutofillItem}
+              onShowToast={props.showToast}
             />
           } />
           <Route path="/goals" element={
@@ -580,6 +692,20 @@ const AnimatedRoutes: React.FC<AnimatedRoutesProps> = (props) => {
               state={props.state} 
               onAddGoal={props.addFinancialGoal}
               onUpdateState={props.setState}
+              onShowToast={props.showToast}
+            />
+          } />
+          <Route path="/report" element={
+            <MonthlyReportGenerator 
+              state={props.state} 
+              onAddTransaction={props.addTransaction}
+              onShowToast={props.showToast}
+            />
+          } />
+          <Route path="/reports" element={
+            <MonthlyReportGenerator 
+              state={props.state} 
+              onAddTransaction={props.addTransaction}
               onShowToast={props.showToast}
             />
           } />
@@ -608,6 +734,17 @@ const AnimatedRoutes: React.FC<AnimatedRoutesProps> = (props) => {
             />
           } />
           <Route path="/finance" element={
+            <Transactions 
+              state={props.state} 
+              onAddTransaction={props.addTransaction} 
+              onUpdateTransaction={props.updateTransaction}
+              onDeleteTransaction={props.deleteTransaction}
+              onUpdateTarget={(val) => props.setState(prev => ({...prev, monthlySavingsTarget: val}))} 
+              onUpdateMonthlyCategoryTarget={props.updateMonthlyCategoryTarget}
+              onUpdateReflection={props.updateReflection}
+            />
+          } />
+          <Route path="/transactions" element={
             <Transactions 
               state={props.state} 
               onAddTransaction={props.addTransaction} 

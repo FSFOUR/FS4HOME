@@ -60,6 +60,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
   const quickNav = [
     { label: 'Dashboard', path: '/', category: 'Page' },
     { label: 'Transactions & Finance', path: '/finance', category: 'Page' },
+    { label: 'Monthly Financial Report', path: '/report', category: 'Page' },
     { label: '80/20 Insights', path: '/pareto', category: 'Page' },
     { label: 'Budget Planner', path: '/budget', category: 'Page' },
     { label: 'Financial Goals', path: '/goals', category: 'Page' },

@@ -15,8 +15,8 @@ import {
 import { KakeiboCategory, Transaction, WealthType } from '../types';
 
 interface Props {
-  spending: Record<string, number>;
-  targets: Record<string, { amount: number }>;
+  spending?: Record<string, number>;
+  targets?: Record<string, { amount: number }>;
   transactions?: Transaction[];
   monthlySavingsTarget?: number;
 }
@@ -24,8 +24,8 @@ interface Props {
 type ChartView = 'trend' | 'categories' | 'bars';
 
 const MonthlySpendingChart: React.FC<Props> = ({ 
-  spending, 
-  targets, 
+  spending = {}, 
+  targets = {}, 
   transactions = [], 
   monthlySavingsTarget = 5000 
 }) => {
@@ -35,24 +35,42 @@ const MonthlySpendingChart: React.FC<Props> = ({
   const trendData = useMemo(() => {
     const months = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
     const now = new Date();
-    const currentMonthIdx = now.getMonth(); // 0-indexed
+    const currentMonthIdx = now.getMonth();
+    const safeSpending: Record<string, number> = spending || {};
+    const safeTargets: Record<string, { amount: number }> = targets || {};
 
-    // Calculate current month's actual spending
-    const currentSpent: number = Object.values(spending as Record<string, number>).reduce(
+    // Calculate current month's actual spending from spending prop or transactions
+    let currentSpent = (Object.values(safeSpending) as number[]).reduce(
       (a: number, b: number) => a + (Number(b) || 0), 
       0
     );
-    const needsSpent: number = Number(spending[KakeiboCategory.NEEDS]) || 0;
-    const wantsSpent: number = Number(spending[KakeiboCategory.WANTS]) || 0;
-    const cultureSpent: number = Number(spending[KakeiboCategory.CULTURE]) || 0;
+    let needsSpent: number = Number(safeSpending[KakeiboCategory.NEEDS]) || 0;
+    let wantsSpent: number = Number(safeSpending[KakeiboCategory.WANTS]) || 0;
+    let cultureSpent: number = Number(safeSpending[KakeiboCategory.CULTURE]) || 0;
+
+    // Fallback: calculate current month spending from transactions if safeSpending is empty
+    if (currentSpent === 0 && transactions && transactions.length > 0) {
+      const currentYear = now.getFullYear();
+      transactions.forEach(t => {
+        if (t.type === WealthType.EXPENSE || t.transactionType === 'Expense') {
+          const d = new Date(t.date);
+          if (d.getMonth() === currentMonthIdx && d.getFullYear() === currentYear) {
+            currentSpent += Number(t.amount || 0);
+            if (t.kakeiboCategory === KakeiboCategory.NEEDS) needsSpent += Number(t.amount || 0);
+            else if (t.kakeiboCategory === KakeiboCategory.WANTS) wantsSpent += Number(t.amount || 0);
+            else if (t.kakeiboCategory === KakeiboCategory.CULTURE) cultureSpent += Number(t.amount || 0);
+          }
+        }
+      });
+    }
     
     // Overall budget target based on Kakeibo targets or baseline
-    const targetTotal: number = Object.values(targets as Record<string, { amount?: number }>).reduce(
+    const targetTotal = (Object.values(safeTargets) as { amount?: number }[]).reduce(
       (sum: number, t: { amount?: number }) => sum + (Number(t?.amount) || 0), 
       0
     ) || 45000;
-    const needsTarget: number = Number(targets[KakeiboCategory.NEEDS]?.amount) || Math.round(targetTotal * 0.5);
-    const wantsTarget: number = Number(targets[KakeiboCategory.WANTS]?.amount) || Math.round(targetTotal * 0.3);
+    const needsTarget: number = Number(safeTargets[KakeiboCategory.NEEDS]?.amount) || Math.round(targetTotal * 0.5);
+    const wantsTarget: number = Number(safeTargets[KakeiboCategory.WANTS]?.amount) || Math.round(targetTotal * 0.3);
 
     // Group actual transactions if available across recent months
     const monthMap = new Map<string, { total: number; needs: number; wants: number; culture: number; count: number }>();
@@ -66,7 +84,7 @@ const MonthlySpendingChart: React.FC<Props> = ({
 
     if (transactions && transactions.length > 0) {
       transactions.forEach(t => {
-        if (t.type === WealthType.EXPENSE) {
+        if (t.type === WealthType.EXPENSE || t.transactionType === 'Expense') {
           const d = new Date(t.date);
           const key = d.toLocaleString('en-US', { month: 'short' });
           if (monthMap.has(key)) {
@@ -103,13 +121,30 @@ const MonthlySpendingChart: React.FC<Props> = ({
 
   // Category bar comparison data
   const categoryData = useMemo(() => {
-    return Object.values(KakeiboCategory).map(category => ({
-      category: category.split(' ')[0], // Short name for label
-      fullName: category,
-      spent: spending[category] || 0,
-      target: targets[category]?.amount || (category === KakeiboCategory.NEEDS ? 22500 : category === KakeiboCategory.WANTS ? 13500 : 4500)
-    }));
-  }, [spending, targets]);
+    const safeSpending = spending || {};
+    const safeTargets = targets || {};
+    const now = new Date();
+    const currentMonthIdx = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    return Object.values(KakeiboCategory).map(category => {
+      let spent = Number(safeSpending[category]) || 0;
+      if (spent === 0 && transactions && transactions.length > 0) {
+        spent = transactions
+          .filter(t => (t.type === WealthType.EXPENSE || t.transactionType === 'Expense') && 
+                       t.kakeiboCategory === category && 
+                       new Date(t.date).getMonth() === currentMonthIdx && 
+                       new Date(t.date).getFullYear() === currentYear)
+          .reduce((acc, t) => acc + Number(t.amount || 0), 0);
+      }
+      return {
+        category: category.split(' ')[0], // Short name for label
+        fullName: category,
+        spent,
+        target: safeTargets[category]?.amount || (category === KakeiboCategory.NEEDS ? 22500 : category === KakeiboCategory.WANTS ? 13500 : 4500)
+      };
+    });
+  }, [spending, targets, transactions]);
 
   // Current month summary metrics
   const currentMonthData = trendData[trendData.length - 1];

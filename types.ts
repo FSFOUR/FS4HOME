@@ -19,14 +19,32 @@ export enum Priority {
   LOW = 'Low'
 }
 
+export type TransactionType =
+  | 'Income'
+  | 'Expense'
+  | 'Transfer'
+  | 'Savings Contribution'
+  | 'Debt Payment'
+  | 'Investment Contribution'
+  | 'Asset'
+  | 'Liability';
+
 export interface Transaction {
   id: string;
   date: string;
   description: string;
   amount: number;
   type: WealthType;
+  transactionType?: TransactionType;
+  category?: string;
+  subcategory?: string;
   kakeiboCategory?: KakeiboCategory;
+  account?: string;
+  paymentMethod?: string;
+  remarks?: string;
+  merchant?: string;
   isRecurring: boolean;
+  recurringScheduleId?: string;
 }
 
 export interface ZakatEntry {
@@ -177,4 +195,78 @@ export interface AppState {
   financialDebts?: FinancialDebt[];
   userStrategy?: UserStrategy;
   displayDensity?: DisplayDensity;
+  // Monthly Budget Allocation & Persistent Custom Categories
+  monthlyBudgetPlans?: Record<string, MonthlyBudgetPlan>;
+  customBudgetCategories?: BudgetCategory[];
+  recurringExpenses?: RecurringExpenseItem[];
+  autofillMemory?: AutofillMemoryItem[];
+  accountBalances?: Record<string, number>;
+}
+
+export interface BudgetSubcategory {
+  id: string;
+  name: string;
+  plannedAmount: number;
+  archived?: boolean;
+  order?: number;
+}
+
+export interface BudgetCategory {
+  id: string;
+  name: string;
+  icon?: string;
+  isSavings?: boolean; // Separates spending from transfers/savings contributions
+  archived?: boolean;
+  order?: number;
+  subcategories: BudgetSubcategory[];
+}
+
+export interface MonthlyBudgetPlan {
+  monthKey: string; // "YYYY-MM"
+  totalMonthlyBudget: number; // default ₹20,000, user-configurable
+  categories: BudgetCategory[];
+}
+
+export type RecurringFrequency = 
+  | 'Weekly'
+  | 'Every 2 weeks'
+  | 'Monthly'
+  | 'Every 2 months'
+  | 'Quarterly'
+  | 'Every 6 months'
+  | 'Yearly'
+  | 'Custom';
+
+export interface RecurringExpenseItem {
+  id: string;
+  name: string;
+  expectedAmount: number;
+  frequency: RecurringFrequency;
+  customIntervalDays?: number;
+  startDate: string;
+  nextDueDate: string;
+  endDate?: string;
+  category: string;
+  subcategory?: string;
+  merchant?: string;
+  account?: string;
+  paymentMethod?: string;
+  remarks?: string;
+  reminderPreference?: 'None' | 'On Due Date' | '1 day before' | '3 days before';
+  status: 'Active' | 'Paused' | 'Cancelled';
+  lastPaidDate?: string;
+}
+
+export interface AutofillMemoryItem {
+  id: string;
+  type: string;
+  description: string;
+  category: string;
+  subcategory?: string;
+  account?: string;
+  paymentMethod?: string;
+  remarks?: string;
+  frequencyCount: number;
+  lastUsed: string;
+  isShared?: boolean;
 }

@@ -10,7 +10,7 @@ interface SettingsProps {
 
 export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShowToast }) => {
   const [activeTab, setActiveTab] = useState<'appearance' | 'account' | 'finance' | 'ai' | 'notifications' | 'data'>('appearance');
-  const [nameInput, setNameInput] = useState(state.userName || 'User');
+  const [nameInput, setNameInput] = useState(state.userName && state.userName !== 'User' ? state.userName : 'Shafi');
   const [savingsInput, setSavingsInput] = useState(state.monthlySavingsTarget || 5000);
 
   const density = state.displayDensity || 'compact';
@@ -26,7 +26,7 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
     e.preventDefault();
     onUpdateState(prev => ({
       ...prev,
-      userName: nameInput.trim() || 'User',
+      userName: nameInput.trim() || 'Shafi',
       monthlySavingsTarget: Number(savingsInput) || 5000
     }));
     onShowToast('Profile & Finance Settings Saved ✓');
