@@ -37,8 +37,10 @@ import { GoalsView } from './components/GoalsView';
 import { CalculatorModal } from './components/Tools/CalculatorModal';
 import { Settings } from './components/Settings';
 import { MonthlyReportGenerator } from './components/MonthlyReportGenerator';
+import { Loans } from './components/Loans';
 import { fetchPrayerTimes } from './services/geminiService';
 import { DEFAULT_BUDGET_CATEGORIES, DEFAULT_AUTOFILL_ITEMS } from './services/budgetService';
+import { DEFAULT_LOAN_RECORDS, DEFAULT_LOAN_PAYMENTS } from './services/loanService';
 
 const STORAGE_KEY = 'fs4home_data';
 
@@ -118,7 +120,10 @@ export const DEFAULT_STATE: AppState = {
     'Cash in Hand': 0,
     'UPI / GPay': 0,
     'Credit Card': 0,
-  }
+  },
+  loanRecords: DEFAULT_LOAN_RECORDS,
+  loanPayments: DEFAULT_LOAN_PAYMENTS,
+  theme: 'calm-wealth',
 };
 
 const Navigation = () => {
@@ -188,7 +193,14 @@ const App: React.FC = () => {
         const resolvedUserName = parsed.userName && parsed.userName.trim() && parsed.userName.trim() !== 'User'
           ? parsed.userName.trim()
           : 'Shafi';
-        return { ...DEFAULT_STATE, ...parsed, userName: resolvedUserName };
+        let loanRecords = Array.isArray(parsed.loanRecords) ? parsed.loanRecords : [];
+        let loanPayments = Array.isArray(parsed.loanPayments) ? parsed.loanPayments : [];
+        // Sanitize legacy demo loans so the app is completely live, clean, and ready to use
+        if (loanRecords.some((l: any) => l.id?.startsWith('LN00') || l.partyName === 'Ahmed' || l.partyName === 'Bank A' || l.partyName === 'Person C')) {
+          loanRecords = [];
+          loanPayments = [];
+        }
+        return { ...DEFAULT_STATE, ...parsed, userName: resolvedUserName, loanRecords, loanPayments, theme: 'calm-wealth' };
       } catch {
         return DEFAULT_STATE;
       }
@@ -200,10 +212,12 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  // Synchronize HTML root class for density modes ('density-comfortable', 'density-compact', 'density-extra-compact')
+  // Synchronize HTML root attribute and classes for Calm Wealth & Display Density
   useEffect(() => {
     const currentDensity = state.displayDensity || (localStorage.getItem('fs4home_density') as any) || 'compact';
-    document.documentElement.className = `density-${currentDensity}`;
+    document.documentElement.setAttribute('data-theme', 'calm-wealth');
+    document.documentElement.className = `density-${currentDensity} theme-calm-wealth`.trim();
+    localStorage.setItem('fs4home_theme', 'calm-wealth');
   }, [state.displayDensity]);
 
   const addMinutes = (time: string | undefined, minutes: number): string => {
@@ -561,6 +575,7 @@ const App: React.FC = () => {
     <Router>
       <Layout 
         state={state} 
+        onUpdateState={setState}
         onAddTransaction={addTransaction}
         onAddRecurringExpense={addRecurringExpense}
         onSaveAutofillMemory={saveAutofillMemory}
@@ -709,7 +724,30 @@ const AnimatedRoutes: React.FC<AnimatedRoutesProps> = (props) => {
               onShowToast={props.showToast}
             />
           } />
-          <Route path="/tools/calculator" element={<CalculatorModal isPage={true} />} />
+          <Route 
+            path="/loans" 
+            element={
+              <Loans 
+                isPage={true} 
+                state={props.state}
+                onUpdateState={props.setState}
+                onShowToast={props.showToast}
+                onAddTransaction={props.addTransaction}
+              />
+            } 
+          />
+          <Route 
+            path="/tools/calculator" 
+            element={
+              <CalculatorModal 
+                isPage={true} 
+                state={props.state}
+                onUpdateState={props.setState}
+                onShowToast={props.showToast}
+                onAddTransaction={props.addTransaction}
+              />
+            } 
+          />
           <Route path="/settings" element={
             <Settings 
               state={props.state} 

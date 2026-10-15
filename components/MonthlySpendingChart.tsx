@@ -31,6 +31,22 @@ const MonthlySpendingChart: React.FC<Props> = ({
 }) => {
   const [viewMode, setViewMode] = useState<ChartView>('trend');
 
+  const isCalmWealth = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') !== 'midnight-ledger' : true;
+  const gridStroke = isCalmWealth ? '#E1E5DC' : '#134e30';
+  const axisStroke = isCalmWealth ? '#68756C' : '#15803d';
+  const textFill = isCalmWealth ? '#24342B' : '#a7f3d0';
+  const tooltipStyle = {
+    backgroundColor: isCalmWealth ? '#FFFFFF' : '#072415',
+    borderRadius: '0.75rem',
+    border: isCalmWealth ? '1px solid #E1E5DC' : '1px solid rgba(163, 230, 53, 0.3)',
+    boxShadow: isCalmWealth ? '0 4px 16px -2px rgba(36, 74, 56, 0.1)' : '0 10px 25px -5px rgba(0,0,0,0.6)',
+    color: isCalmWealth ? '#24342B' : '#ffffff',
+    fontSize: '11px',
+    padding: '8px 12px'
+  };
+  const targetColor = isCalmWealth ? '#244A38' : '#a3e635';
+  const spentColor = isCalmWealth ? '#b91c1c' : '#fb7185';
+
   // Compute 6-month historical & current spending trends
   const trendData = useMemo(() => {
     const months = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
@@ -212,27 +228,19 @@ const MonthlySpendingChart: React.FC<Props> = ({
         <ResponsiveContainer width="100%" height="100%">
           {viewMode === 'trend' ? (
             <LineChart data={trendData} margin={{ top: 10, right: 12, left: -15, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#134e30" vertical={false} opacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} opacity={0.6} />
               <XAxis 
                 dataKey="month" 
-                tick={{ fontSize: 10, fill: '#a7f3d0', fontWeight: 'bold' }} 
-                stroke="#15803d" 
+                tick={{ fontSize: 10, fill: textFill, fontWeight: 'bold' }} 
+                stroke={axisStroke} 
               />
               <YAxis 
-                tick={{ fontSize: 10, fill: '#a7f3d0' }} 
-                stroke="#15803d"
+                tick={{ fontSize: 10, fill: textFill }} 
+                stroke={axisStroke}
                 tickFormatter={(val) => `₹${val >= 1000 ? `${Math.round(val / 1000)}k` : val}`}
               />
               <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#072415', 
-                  borderRadius: '0.75rem', 
-                  border: '1px solid rgba(163, 230, 53, 0.3)', 
-                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6)',
-                  color: '#ffffff',
-                  fontSize: '11px',
-                  padding: '8px 12px'
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: any, name: any) => [
                   `₹${Number(value).toLocaleString()}`,
                   name === 'spent' ? 'Actual Spent' : name === 'target' ? 'Budget Target' : name
@@ -240,9 +248,9 @@ const MonthlySpendingChart: React.FC<Props> = ({
                 labelFormatter={(label) => `Month: ${label}`}
               />
               <Legend 
-                wrapperStyle={{ fontSize: '10px', paddingTop: '6px', color: '#a7f3d0' }}
+                wrapperStyle={{ fontSize: '10px', paddingTop: '6px' }}
                 formatter={(val) => (
-                  <span className="text-[10px] font-bold text-emerald-200">
+                  <span className="text-[10px] font-bold opacity-90">
                     {val === 'spent' ? 'Actual Spending' : val === 'target' ? 'Kakeibo Target Limit' : val}
                   </span>
                 )}
@@ -251,70 +259,63 @@ const MonthlySpendingChart: React.FC<Props> = ({
                 type="monotone" 
                 dataKey="spent" 
                 name="spent" 
-                stroke="#fb7185" 
+                stroke={spentColor} 
                 strokeWidth={3}
-                dot={{ r: 4, fill: '#fb7185', strokeWidth: 2, stroke: '#072415' }}
-                activeDot={{ r: 6, fill: '#fda4af', stroke: '#fff', strokeWidth: 2 }}
+                dot={{ r: 4, fill: spentColor, strokeWidth: 1 }}
+                activeDot={{ r: 6, fill: spentColor, stroke: '#fff', strokeWidth: 2 }}
               />
               <Line 
                 type="monotone" 
                 dataKey="target" 
                 name="target" 
-                stroke="#a3e635" 
+                stroke={targetColor} 
                 strokeWidth={2}
                 strokeDasharray="5 5"
-                dot={{ r: 3, fill: '#a3e635', strokeWidth: 1, stroke: '#072415' }}
+                dot={{ r: 3, fill: targetColor, strokeWidth: 1 }}
               />
             </LineChart>
           ) : viewMode === 'categories' ? (
             <LineChart data={trendData} margin={{ top: 10, right: 12, left: -15, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#134e30" vertical={false} opacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} opacity={0.6} />
               <XAxis 
                 dataKey="month" 
-                tick={{ fontSize: 10, fill: '#a7f3d0', fontWeight: 'bold' }} 
-                stroke="#15803d" 
+                tick={{ fontSize: 10, fill: textFill, fontWeight: 'bold' }} 
+                stroke={axisStroke} 
               />
               <YAxis 
-                tick={{ fontSize: 10, fill: '#a7f3d0' }} 
-                stroke="#15803d"
+                tick={{ fontSize: 10, fill: textFill }} 
+                stroke={axisStroke}
                 tickFormatter={(val) => `₹${val >= 1000 ? `${Math.round(val / 1000)}k` : val}`}
               />
               <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#072415', 
-                  borderRadius: '0.75rem', 
-                  border: '1px solid rgba(163, 230, 53, 0.3)', 
-                  color: '#ffffff',
-                  fontSize: '11px',
-                  padding: '8px 12px'
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(val: any, name: any) => [
                   `₹${Number(val).toLocaleString()}`,
                   name === 'needs' ? 'Essential Needs' : name === 'wants' ? 'Discretionary Wants' : name
                 ]}
               />
-              <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '6px', color: '#a7f3d0' }} />
+              <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '6px' }} />
               <Line 
                 type="monotone" 
                 dataKey="needs" 
                 name="Essential Needs" 
-                stroke="#38bdf8" 
+                stroke="#0284c7" 
                 strokeWidth={2.5}
-                dot={{ r: 3, fill: '#38bdf8' }}
+                dot={{ r: 3, fill: '#0284c7' }}
               />
               <Line 
                 type="monotone" 
                 dataKey="wants" 
                 name="Discretionary Wants" 
-                stroke="#fbbf24" 
+                stroke="#d97706" 
                 strokeWidth={2.5}
-                dot={{ r: 3, fill: '#fbbf24' }}
+                dot={{ r: 3, fill: '#d97706' }}
               />
               <Line 
                 type="monotone" 
                 dataKey="needsTarget" 
                 name="Needs Benchmark" 
-                stroke="#38bdf8" 
+                stroke="#0284c7" 
                 strokeDasharray="4 4"
                 strokeWidth={1.5}
                 dot={false}
@@ -322,28 +323,21 @@ const MonthlySpendingChart: React.FC<Props> = ({
             </LineChart>
           ) : (
             <BarChart data={categoryData} margin={{ top: 10, right: 12, left: -15, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#134e30" vertical={false} opacity={0.5} />
-              <XAxis dataKey="category" tick={{ fontSize: 10, fill: '#a7f3d0', fontWeight: 'bold' }} stroke="#15803d" />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} opacity={0.6} />
+              <XAxis dataKey="category" tick={{ fontSize: 10, fill: textFill, fontWeight: 'bold' }} stroke={axisStroke} />
               <YAxis 
-                tick={{ fontSize: 10, fill: '#a7f3d0' }} 
-                stroke="#15803d"
+                tick={{ fontSize: 10, fill: textFill }} 
+                stroke={axisStroke}
                 tickFormatter={(val) => `₹${val >= 1000 ? `${Math.round(val / 1000)}k` : val}`}
               />
               <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#072415', 
-                  borderRadius: '0.75rem', 
-                  border: '1px solid rgba(163, 230, 53, 0.3)', 
-                  color: '#ffffff',
-                  fontSize: '11px',
-                  padding: '8px 12px'
-                }}
+                contentStyle={tooltipStyle}
                 formatter={(value: any, name: any) => [`₹${Number(value).toLocaleString()}`, name === 'spent' ? 'Spent' : 'Target']}
                 labelFormatter={(label, item) => item[0]?.payload?.fullName || label}
               />
-              <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '6px', color: '#a7f3d0' }} />
-              <Bar dataKey="spent" name="Spent (₹)" fill="#fb7185" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="target" name="Target (₹)" fill="#a3e635" radius={[4, 4, 0, 0]} />
+              <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '6px' }} />
+              <Bar dataKey="spent" name="Spent (₹)" fill={spentColor} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="target" name="Target (₹)" fill={targetColor} radius={[4, 4, 0, 0]} />
             </BarChart>
           )}
         </ResponsiveContainer>

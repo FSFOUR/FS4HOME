@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppState, DisplayDensity } from '../types';
+import { AppState, DisplayDensity, AppTheme } from '../types';
 import { DEFAULT_STATE } from '../App';
 
 interface SettingsProps {
@@ -17,9 +17,9 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
 
   const handleDensityChange = (newDensity: DisplayDensity) => {
     onUpdateState(prev => ({ ...prev, displayDensity: newDensity }));
-    document.documentElement.className = `density-${newDensity}`;
+    document.documentElement.className = `density-${newDensity} theme-calm-wealth`.trim();
     localStorage.setItem('fs4home_density', newDensity);
-    onShowToast(`Density set to ${newDensity.replace('-', ' ')} ✓`);
+    onShowToast(`Display density set to ${newDensity.replace('-', ' ')} ✓`);
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -76,11 +76,13 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
     if (window.confirm('⚠️ WARNING: Are you sure you want to delete ALL data and start with a completely fresh, empty app for a new user? This will reset all transactions, goals, debts, food plan, vehicle records, and routines.')) {
       localStorage.removeItem('fs4home_data');
       localStorage.removeItem('fs4home_density');
-      document.documentElement.className = 'density-compact';
-      onUpdateState(DEFAULT_STATE);
-      setNameInput('');
-      setSavingsInput(0);
-      onShowToast('App wiped to fresh new user state ✓');
+      localStorage.setItem('fs4home_theme', 'calm-wealth');
+      document.documentElement.setAttribute('data-theme', 'calm-wealth');
+      document.documentElement.className = 'density-compact theme-calm-wealth';
+      onUpdateState({ ...DEFAULT_STATE, userName: 'Shafi', theme: 'calm-wealth', loanRecords: [], loanPayments: [] });
+      setNameInput('Shafi');
+      setSavingsInput(5000);
+      onShowToast('App wiped to fresh Calm Wealth live state ✓');
     }
   };
 
@@ -90,7 +92,7 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
       <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
         <div>
           <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">Settings</h1>
-          <p className="text-xs text-emerald-300/70">Personalize display density, accounts, AI, and data backups</p>
+          <p className="text-xs text-emerald-300/70">Personalize theme appearance, display density, profile, and data</p>
         </div>
         <button
           onClick={handleExportData}
@@ -103,7 +105,7 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
       {/* Compact Tab Switcher */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-emerald-500/10 no-scrollbar">
         {[
-          { id: 'appearance', label: 'Display & Density' },
+          { id: 'appearance', label: 'Appearance' },
           { id: 'account', label: 'Profile' },
           { id: 'finance', label: 'Finance Rules' },
           { id: 'ai', label: 'AI Advisory' },
@@ -113,10 +115,10 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
               activeTab === tab.id
-                ? 'bg-lime-400 text-emerald-950 shadow-sm'
-                : 'text-emerald-300/70 hover:text-white hover:bg-emerald-950/60'
+                ? 'bg-[#244A38] text-white shadow-xs'
+                : 'text-[#68756C] hover:text-[#24342B] hover:bg-[#E9EEE5]'
             }`}
           >
             {tab.label}
@@ -124,18 +126,78 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
         ))}
       </div>
 
-      {/* Tab 1: Appearance & Display Density */}
+      {/* Tab 1: Appearance (Theme & Display Density) */}
       {activeTab === 'appearance' && (
-        <div className="glass-card p-4 md:p-5 rounded-2xl space-y-4 border border-emerald-500/20">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-            <div>
-              <h3 className="text-sm font-black text-white">Display Density</h3>
-              <p className="text-xs text-emerald-300/70">Updates global spacing, card paddings, and data row heights</p>
+        <div className="space-y-4">
+          {/* Theme Control Card */}
+          <div className="bg-white p-5 rounded-2xl space-y-4 border border-[#E1E5DC] shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <div>
+                <h3 className="text-sm font-bold text-[#24342B]">Visual Identity & Theme</h3>
+                <p className="text-xs text-[#68756C]">
+                  FS4HOME uses Theme 1 — Calm Wealth as its exclusive design system
+                </p>
+              </div>
+              <span className="self-start sm:self-auto text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#EAF1E6] text-[#244A38] border border-[#CBD5C8]">
+                ☀ Calm Wealth (Exclusive)
+              </span>
             </div>
-            <span className="self-start sm:self-auto text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/30 text-lime-400">
-              html.density-{density}
-            </span>
+
+            <div className="p-4 rounded-xl border border-[#CBD5C8] bg-[#F0F1E9]/50 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl">🌱</span>
+                  <div>
+                    <span className="text-sm font-bold text-[#24342B] block">Calm Wealth Design System</span>
+                    <span className="text-xs text-[#68756C]">Warm Ivory · Forest Green · Sage Accents · Crisp White</span>
+                  </div>
+                </div>
+                <span className="w-5 h-5 rounded-full bg-[#244A38] text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                  ✓
+                </span>
+              </div>
+
+              <p className="text-xs text-[#68756C] leading-relaxed">
+                Warm ivory background (<code className="font-mono text-[#24342B]">#F6F5EF</code>), crisp white surfaces (<code className="font-mono text-[#24342B]">#FFFFFF</code>), deep forest green primary navigation (<code className="font-mono text-[#24342B]">#244A38</code>), subtle sage highlights (<code className="font-mono text-[#24342B]">#A8C5A0</code>), and accessible financial status indicators.
+              </p>
+
+              {/* Swatches */}
+              <div className="flex items-center gap-2 pt-2 border-t border-[#E1E5DC] flex-wrap">
+                <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-[#E1E5DC]">
+                  <span className="w-4 h-4 rounded-md border border-slate-300" style={{ backgroundColor: '#F6F5EF' }} />
+                  <span className="text-[10px] text-[#68756C] font-mono">App Bg: #F6F5EF</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-[#E1E5DC]">
+                  <span className="w-4 h-4 rounded-md border border-slate-300" style={{ backgroundColor: '#FFFFFF' }} />
+                  <span className="text-[10px] text-[#68756C] font-mono">Surface: #FFFFFF</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-[#E1E5DC]">
+                  <span className="w-4 h-4 rounded-md" style={{ backgroundColor: '#244A38' }} />
+                  <span className="text-[10px] text-[#68756C] font-mono">Brand: #244A38</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-[#E1E5DC]">
+                  <span className="w-4 h-4 rounded-md" style={{ backgroundColor: '#A8C5A0' }} />
+                  <span className="text-[10px] text-[#68756C] font-mono">Sage: #A8C5A0</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-[#E1E5DC]">
+                  <span className="w-4 h-4 rounded-md" style={{ backgroundColor: '#24342B' }} />
+                  <span className="text-[10px] text-[#68756C] font-mono">Text: #24342B</span>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Display Density Card */}
+          <div className="glass-card p-4 md:p-5 rounded-2xl space-y-4 border border-emerald-500/20">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <div>
+                <h3 className="text-sm font-black text-white">Display Density</h3>
+                <p className="text-xs text-emerald-300/70">Updates global spacing, card paddings, and data row heights</p>
+              </div>
+              <span className="self-start sm:self-auto text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/30 text-lime-400">
+                html.density-{density}
+              </span>
+            </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
             {[
@@ -219,6 +281,7 @@ export const Settings: React.FC<SettingsProps> = ({ state, onUpdateState, onShow
             <span className="text-[10px] bg-lime-400/20 text-lime-300 px-2 py-0.5 rounded font-bold">Applied Globally</span>
           </div>
         </div>
+      </div>
       )}
 
       {/* Tab 2: Profile & Account */}

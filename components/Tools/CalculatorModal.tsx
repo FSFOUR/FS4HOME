@@ -1,11 +1,41 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { AppState, Transaction } from '../../types';
+import { LoanBorrowingManager } from './LoanBorrowingManager';
 
-export const CalculatorModal: React.FC<{ isOpen?: boolean; onClose?: () => void; isPage?: boolean }> = ({ 
+export interface CalculatorModalProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  isPage?: boolean;
+  state?: AppState;
+  onUpdateState?: React.Dispatch<React.SetStateAction<AppState>>;
+  onShowToast?: (msg: string) => void;
+  onAddTransaction?: (tx: Omit<Transaction, 'id'>) => void;
+}
+
+export const CalculatorModal: React.FC<CalculatorModalProps> = ({ 
   isOpen = true, 
   onClose,
-  isPage = false 
+  isPage = false,
+  state,
+  onUpdateState,
+  onShowToast,
+  onAddTransaction,
 }) => {
-  const [calcType, setCalcType] = useState<'emi' | 'compound' | 'zakat'>('emi');
+  // If rendered as full page at /tools/calculator, display the comprehensive Loan & Borrowing Manager
+  if (isPage) {
+    return (
+      <LoanBorrowingManager
+        isPage={true}
+        state={state}
+        onUpdateState={onUpdateState}
+        onShowToast={onShowToast}
+        onAddTransaction={onAddTransaction}
+      />
+    );
+  }
+
+  const [calcType, setCalcType] = useState<'emi' | 'compound'>('emi');
   
   // EMI State
   const [loanAmount, setLoanAmount] = useState(500000);
@@ -18,7 +48,7 @@ export const CalculatorModal: React.FC<{ isOpen?: boolean; onClose?: () => void;
   const [invReturnRate, setInvReturnRate] = useState(12);
   const [invYears, setInvYears] = useState(10);
 
-  if (!isOpen && !isPage) return null;
+  if (!isOpen) return null;
 
   // EMI Calculation
   const monthlyRate = interestRate / (12 * 100);
@@ -39,10 +69,10 @@ export const CalculatorModal: React.FC<{ isOpen?: boolean; onClose?: () => void;
   const wealthGained = Math.max(0, totalCorpus - totalInvested);
 
   const content = (
-    <div className={`space-y-4 text-slate-100 ${isPage ? 'max-w-2xl mx-auto' : ''}`}>
+    <div className="space-y-4 text-slate-100">
       <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
         <div>
-          <h2 className="text-lg font-black text-white">Financial Calculator</h2>
+          <h2 className="text-lg font-black text-white">Financial & Loan Calculator</h2>
           <p className="text-xs text-emerald-300/70">Fast mathematical projections for EMI, compounding, and wealth</p>
         </div>
         {onClose && (
@@ -55,24 +85,34 @@ export const CalculatorModal: React.FC<{ isOpen?: boolean; onClose?: () => void;
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setCalcType('emi')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-            calcType === 'emi' ? 'bg-lime-400 text-emerald-950 font-black' : 'bg-emerald-950/60 text-emerald-300/80 hover:bg-emerald-900'
-          }`}
+      {/* Tabs & Full Page Link */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setCalcType('emi')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              calcType === 'emi' ? 'bg-lime-400 text-emerald-950 font-black' : 'bg-emerald-950/60 text-emerald-300/80 hover:bg-emerald-900'
+            }`}
+          >
+            Loan & EMI
+          </button>
+          <button
+            onClick={() => setCalcType('compound')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              calcType === 'compound' ? 'bg-lime-400 text-emerald-950 font-black' : 'bg-emerald-950/60 text-emerald-300/80 hover:bg-emerald-900'
+            }`}
+          >
+            Compound Growth
+          </button>
+        </div>
+
+        <Link
+          to="/tools/calculator"
+          onClick={onClose}
+          className="text-xs font-bold text-lime-400 hover:text-lime-300 underline flex items-center gap-1"
         >
-          Loan & EMI
-        </button>
-        <button
-          onClick={() => setCalcType('compound')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-            calcType === 'compound' ? 'bg-lime-400 text-emerald-950 font-black' : 'bg-emerald-950/60 text-emerald-300/80 hover:bg-emerald-900'
-          }`}
-        >
-          Compound Growth
-        </button>
+          <span>Open Full Manager →</span>
+        </Link>
       </div>
 
       {/* Calculator 1: Loan EMI */}
@@ -187,10 +227,6 @@ export const CalculatorModal: React.FC<{ isOpen?: boolean; onClose?: () => void;
       )}
     </div>
   );
-
-  if (isPage) {
-    return <div className="glass-card p-4 md:p-6 rounded-2xl border border-emerald-500/20">{content}</div>;
-  }
 
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[220] flex items-center justify-center p-3">

@@ -168,6 +168,95 @@ export interface FinancialDebt {
 }
 
 export type DisplayDensity = 'comfortable' | 'compact' | 'extra-compact';
+export type AppTheme = 'calm-wealth';
+
+export type LoanTransactionType = 'Borrowed' | 'Lent';
+
+export type LoanInterestType =
+  | 'No Interest'
+  | 'Simple Interest'
+  | 'Reducing Balance / EMI'
+  | 'Flat Interest'
+  | 'Custom Repayment Plan';
+
+export type RepaymentFrequency =
+  | 'Weekly'
+  | 'Fortnightly'
+  | 'Monthly'
+  | 'Quarterly'
+  | 'Custom dates'
+  | 'One-time settlement';
+
+export type InstallmentStatus =
+  | 'Upcoming'
+  | 'Pending'
+  | 'Partially Paid'
+  | 'Paid'
+  | 'Overdue'
+  | 'Skipped'
+  | 'Rescheduled';
+
+export type LoanStatus = 'Active' | 'Closed' | 'Archived';
+
+export interface RepaymentInstallment {
+  id: string;
+  installmentNumber: number;
+  dueDate: string; // YYYY-MM-DD
+  scheduledAmount: number;
+  principalComponent: number;
+  interestComponent: number;
+  feesComponent?: number;
+  amountPaid: number;
+  remainingAmount: number;
+  paidDate?: string;
+  paymentMethod?: string;
+  account?: string;
+  remarks?: string;
+  status: InstallmentStatus;
+}
+
+export interface LoanPayment {
+  id: string;
+  loanId: string;
+  paymentDate: string; // YYYY-MM-DD
+  amount: number;
+  partyName: string;
+  type: LoanTransactionType;
+  principalComponent: number;
+  interestComponent: number;
+  feesComponent: number;
+  paymentMethod: string;
+  account: string;
+  installmentNumber?: number;
+  remarks?: string;
+  receiptReference?: string;
+  syncToTransactions?: boolean;
+  createdAt: string;
+}
+
+export interface LoanRecord {
+  id: string;
+  name: string;
+  type: LoanTransactionType; // 'Borrowed' | 'Lent'
+  partyName: string;
+  principalAmount: number;
+  interestType: LoanInterestType;
+  interestRate: number; // % p.a.
+  processingFee: number;
+  startDate: string; // YYYY-MM-DD
+  firstPaymentDate: string; // YYYY-MM-DD
+  frequency: RepaymentFrequency;
+  totalTenureMonths: number;
+  numberOfInstallments: number;
+  plannedInstallmentAmount?: number;
+  account?: string;
+  paymentMethod?: string;
+  remarks?: string;
+  status: LoanStatus;
+  schedule: RepaymentInstallment[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface AppState {
   transactions: Transaction[];
@@ -201,6 +290,11 @@ export interface AppState {
   recurringExpenses?: RecurringExpenseItem[];
   autofillMemory?: AutofillMemoryItem[];
   accountBalances?: Record<string, number>;
+  // Loans & Borrowings Management
+  loanRecords?: LoanRecord[];
+  loanPayments?: LoanPayment[];
+  // Appearance Theme
+  theme?: AppTheme;
 }
 
 export interface BudgetSubcategory {

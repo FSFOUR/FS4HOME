@@ -367,34 +367,34 @@ const Transactions: React.FC<Props> = ({
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   return (
-    <div className="space-y-3.5 max-w-6xl mx-auto text-slate-100 animate-in fade-in duration-200 pb-16">
+    <div className="space-y-3.5 max-w-6xl mx-auto text-[#24342B] animate-in fade-in duration-200 pb-16">
       
       {/* Header & Quick Action Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-emerald-500/20 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#E1E5DC] pb-3">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-xl md:text-2xl font-bold text-[#24342B] tracking-tight flex items-center gap-2">
             <span>Transactions & Records</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-lime-400/20 border border-lime-400/30 text-lime-300 font-bold">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-[#EAF1E6] border border-[#CBD5C8] text-[#244A38] font-bold">
               {totals.count} {totals.count === 1 ? 'entry' : 'entries'}
             </span>
           </h1>
-          <p className="text-xs text-emerald-300/70">
+          <p className="text-xs text-[#68756C]">
             Search, filter by category, date range, or amount with instant ledger reconciliation
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Link
             to="/report"
-            className="px-2.5 py-1.5 rounded-lg bg-lime-400/10 border border-lime-400/30 hover:bg-lime-400/20 text-lime-300 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+            className="px-2.5 py-1.5 rounded-xl bg-[#F0F1E9] border border-[#CBD5C8] hover:bg-[#E9EEE5] text-[#244A38] text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
           >
             <span>📊</span>
             <span>Monthly Report</span>
           </Link>
           <button
             onClick={() => setShowAddForm(true)}
-            className="px-3 py-1.5 rounded-xl bg-lime-400 text-emerald-950 text-xs font-black hover:bg-lime-300 shadow-sm glow-lime-sm transition-all flex items-center gap-1"
+            className="px-3 py-1.5 rounded-xl bg-[#244A38] text-white text-xs font-bold hover:bg-[#1a382a] shadow-xs transition-all flex items-center gap-1 active:scale-95"
           >
-            <span>+</span>
+            <span className="text-sm font-bold leading-none">+</span>
             <span>Add Transaction</span>
           </button>
         </div>
@@ -402,23 +402,23 @@ const Transactions: React.FC<Props> = ({
 
       {/* Summary KPI Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <div className="glass-card p-2.5 rounded-xl border border-emerald-500/20">
-          <span className="text-[10px] text-emerald-300/70 font-bold uppercase block">Filtered Income</span>
-          <span className="text-base font-black text-lime-400">₹{totals.income.toLocaleString('en-IN')}</span>
+        <div className="bg-white p-3.5 rounded-2xl border border-[#E1E5DC] shadow-xs">
+          <span className="text-[10px] text-[#68756C] font-semibold uppercase block">Filtered Income</span>
+          <span className="text-base sm:text-lg font-bold text-[#287548]">₹{totals.income.toLocaleString('en-IN')}</span>
         </div>
-        <div className="glass-card p-2.5 rounded-xl border border-emerald-500/20">
-          <span className="text-[10px] text-emerald-300/70 font-bold uppercase block">Filtered Expenses</span>
-          <span className="text-base font-black text-rose-400">₹{totals.expense.toLocaleString('en-IN')}</span>
+        <div className="bg-white p-3.5 rounded-2xl border border-[#E1E5DC] shadow-xs">
+          <span className="text-[10px] text-[#68756C] font-semibold uppercase block">Filtered Expenses</span>
+          <span className="text-base sm:text-lg font-bold text-[#B85D4B]">₹{totals.expense.toLocaleString('en-IN')}</span>
         </div>
-        <div className="glass-card p-2.5 rounded-xl border border-emerald-500/20">
-          <span className="text-[10px] text-emerald-300/70 font-bold uppercase block">Net Cashflow</span>
-          <span className={`text-base font-black ${totals.net >= 0 ? 'text-lime-300' : 'text-rose-300'}`}>
+        <div className="bg-white p-3.5 rounded-2xl border border-[#E1E5DC] shadow-xs">
+          <span className="text-[10px] text-[#68756C] font-semibold uppercase block">Net Cashflow</span>
+          <span className={`text-base sm:text-lg font-bold ${totals.net >= 0 ? 'text-[#287548]' : 'text-[#B85D4B]'}`}>
             {totals.net >= 0 ? '+' : ''}₹{totals.net.toLocaleString('en-IN')}
           </span>
         </div>
-        <div className="glass-card p-2.5 rounded-xl border border-emerald-500/20">
-          <span className="text-[10px] text-emerald-300/70 font-bold uppercase block">Avg Entry</span>
-          <span className="text-base font-black text-emerald-200">₹{Math.round(totals.avg).toLocaleString('en-IN')}</span>
+        <div className="bg-white p-3.5 rounded-2xl border border-[#E1E5DC] shadow-xs">
+          <span className="text-[10px] text-[#68756C] font-semibold uppercase block">Avg Entry</span>
+          <span className="text-base sm:text-lg font-bold text-[#24342B]">₹{Math.round(totals.avg).toLocaleString('en-IN')}</span>
         </div>
       </div>
 

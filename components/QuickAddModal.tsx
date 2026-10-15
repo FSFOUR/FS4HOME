@@ -391,14 +391,14 @@ export const QuickAddModal: React.FC<Props> = ({
               </div>
             </div>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lime-400 text-2xl font-black">₹</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lime-400 text-xl font-black">₹</span>
               <input 
                 type="number" 
                 step="any"
                 placeholder="0.00" 
                 value={amount} 
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 bg-[#05170d] border border-emerald-500/30 rounded-2xl text-lime-400 font-black text-2xl placeholder-emerald-900 outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 transition-all"
+                className="w-full pl-8 pr-4 py-2 bg-[#05170d] border border-emerald-500/30 rounded-2xl text-lime-400 font-black text-xl placeholder-emerald-900 outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 transition-all"
                 required={recurringMode !== 'schedule_only'}
                 autoFocus
               />

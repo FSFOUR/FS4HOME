@@ -1,43 +1,416 @@
-/* Glassmorphism & Custom Emerald/Lime Theme Utilities */
-.glass-card {
-  background: rgba(12, 40, 24, 0.75);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(139, 197, 63, 0.18);
-  box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.45);
+/* ========================================================
+   FS4HOME — COMPLETE CALM WEALTH DESIGN SYSTEM
+   Theme 1 (Exclusive Active Theme): Calm Wealth
+   Brand: Warm Ivory, Forest Green, Crisp White, Soft Sage
+   ======================================================== */
+
+@import "tailwindcss";
+
+:root {
+  /* Core Surface Tokens */
+  --color-app-bg: #F6F5EF;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F0F1E9;
+  --color-surface-hover: #E9EEE5;
+
+  /* Brand Colors */
+  --color-brand-primary: #244A38;
+  --color-brand-primary-hover: #1a382a;
+  --color-brand-secondary: #315B45;
+  --color-accent-sage: #A8C5A0;
+  --color-accent-sage-bg: #EAF1E6;
+
+  /* Typography */
+  --color-text-primary: #24342B;
+  --color-text-secondary: #68756C;
+  --color-text-muted: #81897F;
+  --color-text-inverse: #FFFFFF;
+
+  /* Borders & Focus */
+  --color-border: #E1E5DC;
+  --color-border-strong: #CBD5C8;
+  --color-input-border: #D6DDD2;
+  --color-focus-outline: #527A5B;
+
+  /* Semantic Financial Colors */
+  --color-income: #287548;
+  --color-income-bg: #EAF7ED;
+  --color-savings: #315F43;
+  --color-savings-bg: #EAF1E6;
+  --color-expense: #B85D4B;
+  --color-expense-bg: #FDF1EF;
+  --color-warning: #A96C18;
+  --color-warning-bg: #FEF7ED;
+  --color-danger: #B63D3D;
+  --color-danger-bg: #FDF2F2;
+  --color-info: #426B87;
+  --color-info-bg: #F0F6FA;
+
+  /* Dimensions & Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* Spacing Scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Shadows */
+  --color-card-shadow: 0 1px 3px rgba(36, 74, 56, 0.04), 0 4px 12px -2px rgba(36, 74, 56, 0.05);
+
+  /* Compatibility aliases */
+  --color-page: var(--color-app-bg);
+  --color-text-main: var(--color-text-primary);
+  --color-positive: var(--color-income);
+  --color-negative: var(--color-expense);
 }
 
-.glass-card-hover {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.glass-card-hover:hover {
-  background: rgba(18, 55, 34, 0.85);
-  border-color: rgba(139, 197, 63, 0.35);
-  box-shadow: 0 12px 30px -10px rgba(139, 197, 63, 0.2);
-}
-
-.glow-lime {
-  box-shadow: 0 0 20px rgba(139, 197, 63, 0.35);
+/* Base Document Setup */
+html, body {
+  background-color: #F6F5EF !important;
+  color: #24342B !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Selection */
+::selection {
+  background-color: #A8C5A0;
+  color: #244A38;
+}
+
+/* ========================================================
+   GLOBAL APPLICATION SHELL & LAYOUT
+   ======================================================== */
+
+.app-main-layout {
+  background-color: #F6F5EF !important;
+  color: #24342B !important;
+}
+
+.app-header {
+  background-color: #F6F5EF !important;
+  border-bottom: 1px solid #E1E5DC !important;
+  color: #24342B !important;
+}
+
+.app-sidebar {
+  background-color: #244A38 !important;
+  border-right: 1px solid #315B45 !important;
+  color: #FFFFFF !important;
+}
+
+/* Cards & Surface Containers */
+.glass-card,
+.modal-panel,
+.modal-content,
+[role="dialog"] {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  border: 1px solid #E1E5DC !important;
+  box-shadow: 0 1px 3px rgba(36, 74, 56, 0.04), 0 4px 12px -2px rgba(36, 74, 56, 0.05) !important;
+  color: #24342B !important;
+  border-radius: 1rem !important;
+}
+
+/* Legacy Dark Background Mapping to Crisp Calm Wealth Surfaces */
+.bg-\[\#04140D\],
+.bg-\[\#04160c\],
+.bg-\[\#05170d\],
+.bg-\[\#051c10\],
+.bg-\[\#06180E\],
+.bg-\[\#061e12\],
+.bg-\[\#061f12\],
+.bg-\[\#061f12\]\/80,
+.bg-\[\#061f12\]\/95,
+.bg-\[\#072415\],
+.bg-\[\#072415\]\/95,
+.bg-\[\#072416\],
+.bg-\[\#072416\]\/95,
+.bg-\[\#081e13\]\/95,
+.bg-\[\#082215\],
+.bg-\[\#082b18\],
+.bg-\[\#092616\],
+.bg-\[\#0a2618\],
+.bg-\[\#0b2416\],
+.bg-\[\#0b2f1c\],
+.bg-\[\#0b331c\],
+.bg-\[\#0b331f\],
+.bg-\[\#0b331f\]\/90,
+.bg-\[\#0c2f1e\]\/90,
+.bg-\[\#124227\],
+.bg-\[\#124b2a\],
+.bg-emerald-950,
+.bg-emerald-950\/90,
+.bg-emerald-950\/80,
+.bg-emerald-950\/70,
+.bg-emerald-950\/60,
+.bg-emerald-950\/50,
+.bg-emerald-950\/40,
+.bg-emerald-900\/50,
+.bg-emerald-900\/60,
+.bg-emerald-900\/70 {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  border-color: #E1E5DC !important;
+  color: #24342B !important;
+}
+
+/* Soft secondary surface items (table rows, filters, chips, search inputs) */
+.bg-emerald-950\/30,
+.bg-emerald-950\/20,
+.bg-emerald-950\/10,
+.bg-emerald-900\/30,
+.bg-emerald-900\/20,
+.bg-emerald-900\/10,
+.bg-emerald-900\/40,
+.bg-white\/5,
+.bg-white\/10,
+.bg-black\/20,
+.bg-black\/30,
+.bg-black\/40 {
+  background-color: #F0F1E9 !important;
+  border-color: #E1E5DC !important;
+  color: #24342B !important;
+}
+
+/* Borders */
+.border-emerald-500\/10,
+.border-emerald-500\/15,
+.border-emerald-500\/20,
+.border-emerald-500\/25,
+.border-emerald-500\/30,
+.border-emerald-700\/50,
+.border-emerald-800,
+.border-emerald-800\/30,
+.border-emerald-800\/40,
+.border-emerald-800\/50,
+.border-emerald-800\/60,
+.border-emerald-800\/80,
+.border-emerald-900,
+.border-lime-500\/15,
+.border-lime-500\/20,
+.border-lime-500\/25,
+.border-lime-500\/30,
+.border-lime-400\/20,
+.border-lime-400\/30,
+.border-lime-400\/40,
+.border-white\/5,
+.border-white\/10,
+.border-white\/20 {
+  border-color: #E1E5DC !important;
+}
+
+/* ========================================================
+   TYPOGRAPHY RULES
+   ======================================================== */
+
+/* General Text Overrides */
+.text-slate-100,
+.text-slate-50 {
+  color: #24342B !important;
+}
+
+/* Headings and labels with text-white default to #24342B unless inside brand green buttons */
+h1.text-white,
+h2.text-white,
+h3.text-white,
+h4.text-white,
+p.text-white,
+div.text-white:not([class*="bg-[#244A38]"]):not([class*="bg-lime"]):not([class*="bg-rose"]):not([class*="bg-emerald-500"]),
+span.text-white:not([class*="bg-[#244A38]"]):not([class*="bg-lime"]):not([class*="bg-rose"]):not([class*="bg-emerald-500"]) {
+  color: #24342B !important;
+}
+
+.text-emerald-300,
+.text-emerald-300\/70,
+.text-emerald-300\/80,
+.text-emerald-300\/60,
+.text-emerald-200,
+.text-emerald-200\/80,
+.text-emerald-200\/70,
+.text-emerald-200\/90,
+.text-emerald-100\/90,
+.text-slate-400,
+.text-slate-300,
+.text-slate-200 {
+  color: #68756C !important;
+}
+
+.text-emerald-400\/70,
+.text-emerald-400\/60,
+.text-emerald-400\/50,
+.text-slate-500,
+.text-slate-400\/80 {
+  color: #81897F !important;
+}
+
+/* Semantic Status Colors */
+.text-emerald-400,
+.text-emerald-500,
+.status-positive {
+  color: #287548 !important;
+}
+
+.text-amber-400,
+.text-amber-300,
+.status-warning {
+  color: #A96C18 !important;
+}
+
+.text-rose-400,
+.text-rose-500,
+.status-negative {
+  color: #B85D4B !important;
+}
+
+/* ========================================================
+   BUTTONS & INTERACTIVE ELEMENTS
+   ======================================================== */
+
+/* Primary Action Buttons: Forest Green with Crisp White Text */
+.bg-lime-400,
+.bg-lime-500,
+.bg-\[\#244A38\],
+button.btn-primary {
+  background-color: #244A38 !important;
+  color: #FFFFFF !important;
+  border-color: #244A38 !important;
+  font-weight: 700 !important;
+}
+
+.bg-lime-400 *,
+.bg-lime-500 *,
+.bg-\[\#244A38\] *,
+button.btn-primary * {
+  color: #FFFFFF !important;
+}
+
+.bg-lime-400:hover,
+.bg-lime-500:hover,
+.bg-\[\#244A38\]:hover,
+button.btn-primary:hover,
+.hover\:bg-lime-300:hover,
+.hover\:bg-lime-400:hover {
+  background-color: #1a382a !important;
+  color: #FFFFFF !important;
+}
+
+/* Secondary Action Buttons & Pills: Soft Sage */
+.bg-lime-400\/10,
+.bg-lime-400\/15,
+.bg-lime-400\/20,
+.bg-emerald-900\/40,
+.bg-emerald-900\/60 {
+  background-color: #EAF1E6 !important;
+  color: #244A38 !important;
+  border-color: #CBD5C8 !important;
+}
+
+.bg-lime-400\/10 *,
+.bg-lime-400\/15 *,
+.bg-lime-400\/20 * {
+  color: #244A38 !important;
+}
+
+/* Text links / accent text */
+.text-lime-400,
+.text-lime-300 {
+  color: #244A38 !important;
+}
+
+/* Form Inputs, Selects, and Textareas */
+input, select, textarea {
+  background-color: #FFFFFF !important;
+  color: #24342B !important;
+  border: 1px solid #D6DDD2 !important;
+  border-radius: 0.625rem !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #81897F !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #527A5B !important;
+  outline: 2px solid rgba(82, 122, 91, 0.25) !important;
+  outline-offset: 1px !important;
+}
+
+/* Tables */
+table {
+  color: #24342B !important;
+}
+
+th {
+  background-color: #F0F1E9 !important;
+  color: #68756C !important;
+  border-color: #E1E5DC !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+td {
+  border-color: #E1E5DC !important;
+  color: #24342B !important;
+}
+
+tr:hover td {
+  background-color: #E9EEE5 !important;
+}
+
+/* Mobile Bottom Navigation Dock */
+.mobile-bottom-nav {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E1E5DC !important;
+  box-shadow: 0 -4px 20px rgba(36, 74, 56, 0.06) !important;
+}
+
+.mobile-bottom-nav .bg-emerald-900\/70,
+.mobile-bottom-nav .bg-\[\#EAF1E6\] {
+  background-color: #EAF1E6 !important;
+  color: #244A38 !important;
+}
+
+.mobile-bottom-nav .bg-emerald-900\/70 svg,
+.mobile-bottom-nav .bg-emerald-900\/70 span {
+  color: #244A38 !important;
+}
+
+/* Glow / Shadow Overrides */
+.glow-lime,
 .glow-lime-sm {
-  box-shadow: 0 0 10px rgba(139, 197, 63, 0.25);
+  box-shadow: 0 1px 3px rgba(36, 74, 56, 0.04) !important;
 }
 
-/* Display Density CSS System */
+[class*="drop-shadow"] {
+  filter: none !important;
+}
+
+/* Ambient Accents Hidden in Calm Wealth */
+.theme-ambient-accent-1,
+.theme-ambient-accent-2 {
+  display: none !important;
+}
+
+/* ========================================================
+   DISPLAY DENSITY CSS SYSTEM
+   ======================================================== */
 html.density-comfortable {
   --density-card-padding: 1.25rem;
   --density-row-gap: 0.75rem;
   --density-item-py: 0.625rem;
 }
-
 html.density-comfortable .glass-card {
   padding: 1.25rem;
-}
-
-html.density-comfortable .space-y-3\.5 > :not([hidden]) ~ :not([hidden]),
-html.density-comfortable .space-y-4 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 1.25rem;
 }
 
 html.density-compact {
@@ -45,7 +418,6 @@ html.density-compact {
   --density-row-gap: 0.5rem;
   --density-item-py: 0.375rem;
 }
-
 html.density-compact .glass-card {
   padding: 0.875rem;
 }
@@ -55,59 +427,30 @@ html.density-extra-compact {
   --density-row-gap: 0.25rem;
   --density-item-py: 0.25rem;
 }
-
 html.density-extra-compact .glass-card {
   padding: 0.5rem 0.625rem !important;
   border-radius: 0.75rem !important;
 }
 
-html.density-extra-compact .space-y-4 > :not([hidden]) ~ :not([hidden]),
-html.density-extra-compact .space-y-3\.5 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 0.5rem !important;
-}
-
-html.density-extra-compact .space-y-3 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 0.375rem !important;
-}
-
-html.density-extra-compact .space-y-2 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 0.25rem !important;
-}
-
-html.density-extra-compact .gap-3 {
-  gap: 0.5rem !important;
-}
-
-html.density-extra-compact .gap-2\.5 {
-  gap: 0.375rem !important;
-}
-
-html.density-extra-compact input,
-html.density-extra-compact select,
-html.density-extra-compact textarea {
-  padding-top: 0.375rem !important;
-  padding-bottom: 0.375rem !important;
-  font-size: 0.75rem !important;
-}
-
-/* Custom scrollbars */
+/* ========================================================
+   CUSTOM SCROLLBARS & ACCESSIBLE FOCUS
+   ======================================================== */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(8, 28, 18, 0.6);
+  background: #F0F1E9;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 197, 63, 0.35);
+  background: #CBD5C8;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 197, 63, 0.65);
+  background: #A8C5A0;
 }
 
-/* Focus visibility for accessibility */
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: 2px solid #a3e635;
+  outline: 2px solid #527A5B;
   outline-offset: 1px;
 }

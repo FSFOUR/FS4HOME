@@ -93,13 +93,10 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
   return (
     <section
       aria-label="Welcome and Financial Overview Banner"
-      className="glass-card rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-[#072416]/95 via-[#0b331f]/90 to-[#072416]/95 relative overflow-hidden shadow-sm transition-all"
+      className="bg-white rounded-2xl border border-[#E1E5DC] relative overflow-hidden shadow-xs transition-all"
     >
-      {/* Ambient background glow */}
-      <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full blur-3xl pointer-events-none bg-emerald-400/10" />
-
       {/* Main Welcome Content */}
-      <div className="p-3.5 sm:p-4 relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+      <div className="p-3.5 sm:p-4.5 relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
         
         {/* Left: Avatar & Greeting */}
         <div className="flex items-start sm:items-center gap-3">
@@ -110,11 +107,11 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="relative shrink-0"
           >
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-800 border-2 border-emerald-400/30 flex items-center justify-center text-white font-black text-sm shadow-md">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-[#244A38] border border-[#315B45] flex items-center justify-center text-white font-bold text-sm shadow-xs">
               {initials}
             </div>
             <span 
-              className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-lime-400 border-2 border-[#072416]" 
+              className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#287548] border-2 border-white" 
               title="Active & Syncing"
             />
           </motion.div>
@@ -129,19 +126,19 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
                     type="text"
                     value={tempName}
                     onChange={e => setTempName(e.target.value)}
-                    className="px-2 py-0.5 text-sm bg-emerald-950 border border-emerald-500/50 rounded text-white font-bold focus:outline-none focus:border-lime-400"
+                    className="px-2.5 py-0.5 text-sm bg-white border border-[#D6DDD2] rounded-lg text-[#24342B] font-bold focus:outline-none focus:border-[#244A38]"
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="text-[10px] bg-lime-400 text-emerald-950 font-bold px-2 py-0.5 rounded hover:bg-lime-300"
+                    className="text-[10px] bg-[#244A38] text-white font-bold px-2 py-1 rounded-md hover:bg-[#1a382a]"
                   >
                     Save
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsEditingName(false)}
-                    className="text-[10px] text-slate-400 hover:text-white px-1"
+                    className="text-[10px] text-[#68756C] hover:text-[#24342B] px-1"
                   >
                     Cancel
                   </button>
@@ -153,7 +150,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
                   transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                   className="flex items-center gap-1.5"
                 >
-                  <h1 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-1.5 flex-wrap">
+                  <h1 className="text-base sm:text-lg font-bold text-[#24342B] tracking-tight flex items-center gap-1.5 flex-wrap">
                     <span>{greeting.text},</span>
                     <motion.span 
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -163,7 +160,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
                         delay: 0.12, 
                         ease: [0.16, 1, 0.3, 1] 
                       }}
-                      className="text-lime-300 font-black inline-block tracking-normal drop-shadow-[0_1px_10px_rgba(190,242,100,0.3)]"
+                      className="text-[#244A38] font-bold inline-block tracking-normal"
                     >
                       {displayName}
                     </motion.span>
@@ -178,7 +175,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
                         setTempName(displayName);
                         setIsEditingName(true);
                       }}
-                      className="text-slate-400 hover:text-emerald-300 p-0.5 text-xs transition-colors"
+                      className="text-[#81897F] hover:text-[#244A38] p-0.5 text-xs transition-colors"
                       title="Edit display name"
                     >
                       ✏️
@@ -189,43 +186,33 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
 
               {/* Status Indicator Chip */}
               {hasAlerts ? (
-                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border flex items-center gap-1 ${
                   highestSeverity === 'critical'
-                    ? 'bg-rose-500/25 text-rose-300 border-rose-500/40 animate-pulse'
-                    : 'bg-amber-500/25 text-amber-300 border-amber-500/40'
-                }`}>
+                    ? 'bg-[#FDF2F2] text-[#B63D3D] border-[#CBD5C8]'
+                    : 'bg-[#FEF7ED] text-[#A96C18] border-[#E1E5DC]'
+                }`} title={`${alerts.length} Category Alerts (≥80%)`}>
                   <span>{highestSeverity === 'critical' ? '🚨' : '⚠️'}</span>
-                  <span>{alerts.length} Category Alert{alerts.length > 1 ? 's' : ''} (≥80%)</span>
                 </span>
               ) : (
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#EAF7ED] text-[#287548] border border-[#CBD5C8] flex items-center gap-1" title="Budgets Safe (<80%)">
                   <span>✓</span>
-                  <span>Budgets Safe (&lt;80%)</span>
                 </span>
               )}
             </div>
 
             {/* Sub-headline with Date & Pacing */}
-            <p className="text-xs text-emerald-200/80 flex items-center gap-2 flex-wrap">
+            <p className="text-xs text-[#68756C] flex items-center gap-2 flex-wrap">
               <span>{formattedDate}</span>
-              <span className="text-emerald-500/60">•</span>
-              <span>Day {daysElapsed} of {totalDaysInMonth} ({monthElapsedPct}% of month)</span>
-              <span className="text-emerald-500/60">•</span>
-              <span className="text-slate-300">
-                {dailyPacerStats.todayExpenses === 0
-                  ? `₹${dailyPacerStats.targetDailyLimit.toLocaleString()} safe limit available today`
-                  : `₹${dailyPacerStats.remainingToday.toLocaleString()} left today`}
-              </span>
             </p>
           </div>
         </div>
 
         {/* Right: Quick Action Controls */}
-        <div className="flex items-center gap-2 flex-wrap lg:justify-end shrink-0 pt-1 lg:pt-0 border-t lg:border-t-0 border-white/5">
+        <div className="flex items-center gap-2 flex-wrap lg:justify-end shrink-0 pt-1 lg:pt-0 border-t lg:border-t-0 border-[#E1E5DC]">
           {onOpenQuickAdd && (
             <button
               onClick={onOpenQuickAdd}
-              className="px-3 py-1.5 rounded-xl bg-lime-400 hover:bg-lime-300 text-emerald-950 text-xs font-black transition-all flex items-center gap-1 shadow-sm glow-lime-sm active:scale-95"
+              className="px-3 py-1.5 rounded-xl bg-[#244A38] hover:bg-[#1a382a] text-white text-xs font-bold transition-all flex items-center gap-1 shadow-xs active:scale-95"
             >
               <span className="text-sm font-bold leading-none">+</span>
               <span>Log Expense</span>
@@ -234,7 +221,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
 
           <Link
             to="/budget"
-            className="px-3 py-1.5 rounded-xl bg-emerald-900/50 hover:bg-emerald-900/80 text-emerald-200 hover:text-white text-xs font-bold transition-all border border-emerald-500/30 flex items-center gap-1"
+            className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#F0F1E9] text-[#244A38] text-xs font-bold transition-all border border-[#CBD5C8] flex items-center gap-1"
           >
             <span>Review Limits →</span>
           </Link>
@@ -245,8 +232,8 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
               onClick={() => setIsAlertsOpen(!isAlertsOpen)}
               className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
                 highestSeverity === 'critical'
-                  ? 'bg-rose-500/20 text-rose-200 border-rose-500/40 hover:bg-rose-500/30'
-                  : 'bg-amber-500/20 text-amber-200 border-amber-500/40 hover:bg-amber-500/30'
+                  ? 'bg-[#FDF2F2] text-[#B63D3D] border-[#CBD5C8] hover:bg-[#fae6e6]'
+                  : 'bg-[#FEF7ED] text-[#A96C18] border-[#E1E5DC] hover:bg-[#faeedc]'
               }`}
               title={isAlertsOpen ? 'Hide Alert Details' : 'View Alert Breakdown'}
             >
@@ -261,30 +248,30 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
       {hasAlerts && (
         <div className={`px-3.5 py-2 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs transition-colors ${
           highestSeverity === 'critical'
-            ? 'bg-rose-950/40 border-rose-500/30 text-rose-200'
-            : 'bg-amber-950/40 border-amber-500/30 text-amber-200'
+            ? 'bg-[#FDF2F2] border-[#E1E5DC] text-[#B63D3D]'
+            : 'bg-[#FEF7ED] border-[#E1E5DC] text-[#A96C18]'
         }`}>
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                highestSeverity === 'critical' ? 'bg-rose-400' : 'bg-amber-400'
+                highestSeverity === 'critical' ? 'bg-[#B63D3D]' : 'bg-[#A96C18]'
               }`}></span>
               <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                highestSeverity === 'critical' ? 'bg-rose-500' : 'bg-amber-400'
+                highestSeverity === 'critical' ? 'bg-[#B63D3D]' : 'bg-[#A96C18]'
               }`}></span>
             </span>
-            <span className="font-semibold text-slate-100">
+            <span className="font-semibold text-[#24342B]">
               {alerts.length === 1 ? (
                 <>
-                  <strong className="text-white">{alerts[0].categoryIcon} {alerts[0].categoryName}</strong> has spent{' '}
-                  <span className={alerts[0].severity === 'critical' ? 'text-rose-400 font-bold' : 'text-amber-300 font-bold'}>
+                  <strong className="text-[#24342B]">{alerts[0].categoryIcon} {alerts[0].categoryName}</strong> has spent{' '}
+                  <span className={alerts[0].severity === 'critical' ? 'text-[#B63D3D] font-bold' : 'text-[#A96C18] font-bold'}>
                     {alerts[0].percentSpent}%
                   </span>{' '}
                   of its monthly budget (₹{alerts[0].actualSpent.toLocaleString()} / ₹{alerts[0].totalPlanned.toLocaleString()}).
                 </>
               ) : (
                 <>
-                  <strong className="text-white">{alerts.length} categories</strong> have crossed 80% planned allocation:{' '}
+                  <strong className="text-[#24342B]">{alerts.length} categories</strong> have crossed 80% planned allocation:{' '}
                   {alerts.map((a, i) => (
                     <span key={a.categoryId} className="whitespace-nowrap">
                       {a.categoryName} ({a.percentSpent}%){i < alerts.length - 1 ? ', ' : ''}
@@ -299,13 +286,13 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
           <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
             <button
               onClick={() => setIsAlertsOpen(!isAlertsOpen)}
-              className="text-[11px] text-lime-400 hover:text-lime-300 font-bold underline"
+              className="text-[11px] text-[#244A38] hover:underline font-bold"
             >
               {isAlertsOpen ? 'Close Drawer' : 'Show Details'}
             </button>
             <Link
               to="/budget"
-              className="text-[11px] text-emerald-300 hover:text-white"
+              className="text-[11px] text-[#244A38] font-semibold hover:underline"
             >
               Adjust Plan →
             </Link>
@@ -315,17 +302,17 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
 
       {/* Expandable Alert Details Drawer (when alerts exist and drawer is toggled) */}
       {hasAlerts && isAlertsOpen && (
-        <div className="p-3.5 sm:p-4 space-y-3.5 bg-black/30 backdrop-blur-sm border-t border-white/5 animate-in slide-in-from-top-2 duration-200">
+        <div className="p-3.5 sm:p-4 space-y-3.5 bg-[#F0F1E9] border-t border-[#E1E5DC] animate-in slide-in-from-top-2 duration-200">
           
           {/* Severity Filter Tabs */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-emerald-950/60 border border-emerald-500/20 text-xs">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-white border border-[#E1E5DC] text-xs">
               <button
                 onClick={() => setSelectedAlertFilter('all')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                   selectedAlertFilter === 'all'
-                    ? 'bg-amber-400 text-emerald-950 shadow-sm'
-                    : 'text-emerald-300/70 hover:text-white'
+                    ? 'bg-[#244A38] text-white shadow-xs'
+                    : 'text-[#68756C] hover:text-[#24342B]'
                 }`}
               >
                 All Active ({alerts.length})
@@ -336,8 +323,8 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
                   onClick={() => setSelectedAlertFilter('critical')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                     selectedAlertFilter === 'critical'
-                      ? 'bg-rose-500 text-white shadow-sm'
-                      : 'text-rose-300/80 hover:text-rose-200'
+                      ? 'bg-[#B63D3D] text-white shadow-xs'
+                      : 'text-[#B63D3D] hover:bg-[#FDF2F2]'
                   }`}
                 >
                   <span>Critical &gt;100% ({criticalCount})</span>
@@ -349,8 +336,8 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
                   onClick={() => setSelectedAlertFilter('caution')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                     selectedAlertFilter === 'caution'
-                      ? 'bg-amber-400 text-emerald-950 shadow-sm'
-                      : 'text-amber-300/80 hover:text-amber-200'
+                      ? 'bg-[#A96C18] text-white shadow-xs'
+                      : 'text-[#A96C18] hover:bg-[#FEF7ED]'
                   }`}
                 >
                   <span>Caution 80–99% ({cautionCount})</span>
@@ -358,7 +345,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
               )}
             </div>
 
-            <span className="text-[11px] text-emerald-300/60">
+            <span className="text-[11px] text-[#68756C]">
               Notification triggered because threshold &gt;= 80% was reached
             </span>
           </div>
@@ -367,26 +354,26 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {displayedAlerts.map(alert => {
               const isOver = alert.severity === 'critical';
-              const cardBorder = isOver ? 'border-rose-500/30' : 'border-amber-500/30';
-              const cardBg = isOver ? 'bg-rose-950/20' : 'bg-amber-950/20';
+              const cardBorder = isOver ? 'border-[#F5D2CC]' : 'border-[#CBD5C8]';
+              const cardBg = 'bg-white';
               const progressWidth = Math.min(100, alert.percentSpent);
 
               return (
                 <div
                   key={alert.categoryId}
-                  className={`p-3.5 rounded-2xl border ${cardBorder} ${cardBg} space-y-3 relative overflow-hidden`}
+                  className={`p-3.5 rounded-2xl border ${cardBorder} ${cardBg} space-y-3 relative shadow-xs`}
                 >
                   {/* Category Title & Severity Badge */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl p-1.5 rounded-xl bg-white/5 border border-white/10">
+                      <span className="text-xl p-1.5 rounded-xl bg-[#F0F1E9] border border-[#E1E5DC]">
                         {alert.categoryIcon}
                       </span>
                       <div>
-                        <h3 className="text-sm font-black text-white flex items-center gap-1.5">
+                        <h3 className="text-sm font-bold text-[#24342B] flex items-center gap-1.5">
                           {alert.categoryName}
                         </h3>
-                        <div className="text-[10px] text-slate-300/80 flex items-center gap-1.5">
+                        <div className="text-[10px] text-[#68756C] flex items-center gap-1.5">
                           <span>Plan: ₹{alert.totalPlanned.toLocaleString()}</span>
                           <span>•</span>
                           <span>Spent: ₹{alert.actualSpent.toLocaleString()}</span>
@@ -395,18 +382,18 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border inline-block ${
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border inline-block ${
                         isOver 
-                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' 
-                          : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                          ? 'bg-[#FDF2F2] text-[#B63D3D] border-[#CBD5C8]' 
+                          : 'bg-[#FEF7ED] text-[#A96C18] border-[#E1E5DC]'
                       }`}>
                         {isOver ? `Overbudget (${alert.percentSpent}%)` : `Nearing Limit (${alert.percentSpent}%)`}
                       </span>
-                      <div className="text-[11px] font-black mt-0.5">
+                      <div className="text-[11px] font-bold mt-0.5">
                         {isOver ? (
-                          <span className="text-rose-400">+₹{alert.overrun.toLocaleString()} over limit</span>
+                          <span className="text-[#B63D3D]">+₹{alert.overrun.toLocaleString()} over limit</span>
                         ) : (
-                          <span className="text-lime-300">₹{alert.remaining.toLocaleString()} remaining</span>
+                          <span className="text-[#287548]">₹{alert.remaining.toLocaleString()} remaining</span>
                         )}
                       </div>
                     </div>
@@ -414,46 +401,44 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
 
                   {/* Progress Bar with 80% Threshold Mark */}
                   <div className="space-y-1">
-                    <div className="w-full bg-emerald-950/90 rounded-full h-3 p-0.5 border border-emerald-500/30 overflow-hidden relative shadow-inner">
+                    <div className="w-full bg-[#F0F1E9] rounded-full h-2.5 p-0.5 border border-[#E1E5DC] overflow-hidden relative">
                       {/* 80% Threshold Tick */}
                       <div
-                        className="absolute top-0 bottom-0 left-[80%] w-0.5 bg-amber-400 z-10 shadow-[0_0_4px_rgba(251,191,36,0.8)]"
+                        className="absolute top-0 bottom-0 left-[80%] w-0.5 bg-[#A96C18] z-10"
                         title="80% Alert Threshold"
                       />
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          isOver
-                            ? 'bg-gradient-to-r from-amber-500 to-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)]'
-                            : 'bg-gradient-to-r from-lime-400 to-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                          isOver ? 'bg-[#B63D3D]' : 'bg-[#A96C18]'
                         }`}
                         style={{ width: `${progressWidth}%` }}
                       />
                     </div>
 
-                    <div className="flex justify-between text-[10px] text-slate-300/70 font-medium px-0.5">
+                    <div className="flex justify-between text-[10px] text-[#68756C] font-medium px-0.5">
                       <span>₹0</span>
-                      <span className="text-amber-300 font-bold">80% Mark (₹{Math.round(alert.totalPlanned * 0.8).toLocaleString()})</span>
-                      <span className="font-bold text-white">Target: ₹{alert.totalPlanned.toLocaleString()}</span>
+                      <span className="text-[#A96C18] font-bold">80% Mark (₹{Math.round(alert.totalPlanned * 0.8).toLocaleString()})</span>
+                      <span className="font-bold text-[#24342B]">Target: ₹{alert.totalPlanned.toLocaleString()}</span>
                     </div>
                   </div>
 
                   {/* Pacing Analytics */}
-                  <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/5 text-[10px]">
-                    <div className="p-2 rounded-xl bg-black/20 border border-white/5">
-                      <span className="text-slate-400 block">Daily Burn</span>
-                      <span className="text-xs font-black text-white">₹{alert.dailyBurnRate}/day</span>
+                  <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#E1E5DC] text-[10px]">
+                    <div className="p-2 rounded-xl bg-[#F0F1E9] border border-[#E1E5DC]">
+                      <span className="text-[#68756C] block">Daily Burn</span>
+                      <span className="text-xs font-bold text-[#24342B]">₹{alert.dailyBurnRate}/day</span>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-black/20 border border-white/5">
-                      <span className="text-slate-400 block">Month-End Spend</span>
-                      <span className={`text-xs font-black ${alert.projectedOverspend > 0 ? 'text-rose-400' : 'text-white'}`}>
+                    <div className="p-2 rounded-xl bg-[#F0F1E9] border border-[#E1E5DC]">
+                      <span className="text-[#68756C] block">Month-End Spend</span>
+                      <span className={`text-xs font-bold ${alert.projectedOverspend > 0 ? 'text-[#B63D3D]' : 'text-[#24342B]'}`}>
                         ₹{alert.projectedMonthEndSpend.toLocaleString()}
                       </span>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-black/20 border border-white/5">
-                      <span className="text-slate-400 block">Safe Daily Cap</span>
-                      <span className={`text-xs font-black ${alert.recommendedDailyCap === 0 ? 'text-rose-400' : 'text-lime-300'}`}>
+                    <div className="p-2 rounded-xl bg-[#F0F1E9] border border-[#E1E5DC]">
+                      <span className="text-[#68756C] block">Safe Daily Cap</span>
+                      <span className={`text-xs font-bold ${alert.recommendedDailyCap === 0 ? 'text-[#B63D3D]' : 'text-[#287548]'}`}>
                         ₹{alert.recommendedDailyCap}/day
                       </span>
                     </div>
@@ -463,13 +448,13 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
                   <div className="flex items-center justify-between pt-1 text-[11px]">
                     <Link
                       to="/finance"
-                      className="text-emerald-300/80 hover:text-white flex items-center gap-1 font-medium"
+                      className="text-[#244A38] hover:underline flex items-center gap-1 font-semibold"
                     >
                       <span>View Transactions →</span>
                     </Link>
                     <Link
                       to="/budget"
-                      className="text-lime-400 hover:underline font-bold"
+                      className="text-[#244A38] hover:underline font-bold"
                     >
                       Reallocate Category →
                     </Link>

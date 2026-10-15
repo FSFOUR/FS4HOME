@@ -67,7 +67,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
     { label: 'Daily Schedule & Routine', path: '/schedule', category: 'Page' },
     { label: 'Food & Lifestyle', path: '/lifestyle', category: 'Page' },
     { label: 'Zakat Calculator', path: '/zakat', category: 'Page' },
-    { label: 'Financial Calculator', path: '/tools/calculator', category: 'Tool' },
+    { label: 'Loan & Borrowing Manager / EMI Calculator', path: '/tools/calculator', category: 'Tool' },
     { label: 'Settings', path: '/settings', category: 'System' },
   ].filter(p => !cleanQuery || p.label.toLowerCase().includes(cleanQuery));
 
